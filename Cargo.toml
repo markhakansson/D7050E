@@ -1,5 +1,5 @@
 [package]
-name = "D7050E"
+name = "d7050e"
 version = "0.1.0"
 authors = ["mark"]
 edition = "2018"
@@ -10,3 +10,4 @@ edition = "2018"
 nom = "5.0.1"
 derive_more = "0.15.0"
 nom_locate = "1.0.0"
+
