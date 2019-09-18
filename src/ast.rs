@@ -47,4 +47,5 @@ pub enum Expr {
     Var(Identifier),
     Bool(BoolState),
     Let(Identifier, Type, Box<Expr>),
+    If(Box<Expr>,Vec<Expr>)
 }

@@ -11,11 +11,7 @@ fn main() {
     //println!("{:#?}", tree_sum);
     //println!("{:#?}", tree_decl);
 
-    //let nested = "(1+3)";
-    //let tree = parse_nested(nested);
-    //println!("{:#?}",tree);
-
-    let booltest = "let a: bool = true;";
-    let tree = parse_declaration(booltest);
-    println!("{:#?}", tree);
+   let sum = "1+(1+((3+50)-2))+(2)";
+   let tree = parse_expr_test(sum);
+   println!("{:#?}",tree);
 }

@@ -49,24 +49,22 @@ pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
 }
 
 pub fn parse_bin_op(input: &str) -> IResult<&str, MathOp> {
-    preceded(
+    delimited(
         multispace0,
-        terminated(
-            alt((
-                map(tag("/"), |_| MathOp::Division),
-                map(tag("%"), |_| MathOp::Modulo),
-                map(tag("*"), |_| MathOp::Multiply),
-                map(tag("-"), |_| MathOp::Minus),
-                map(tag("+"), |_| MathOp::Plus),
-            )),
-            multispace0,
-        ),
+        alt((
+            map(tag("/"), |_| MathOp::Division),
+            map(tag("%"), |_| MathOp::Modulo),
+            map(tag("*"), |_| MathOp::Multiply),
+            map(tag("-"), |_| MathOp::Minus),
+            map(tag("+"), |_| MathOp::Plus),
+        )),
+        multispace0
     )(input)
 }
 
 pub fn parse_i32(input: &str) -> IResult<&str, i32> {
     let (substring, sign) = fold_many0(
-        preceded(multispace0, terminated(tag("-"), multispace0)),
+        delimited(multispace0, tag("-"), multispace0),
         1,
         |mut sign: i32, _| {
             sign *= -1;
@@ -74,11 +72,63 @@ pub fn parse_i32(input: &str) -> IResult<&str, i32> {
         },
     )(input)?;
 
-    let (substring, digit) = preceded(multispace0, terminated(digit1, multispace0))(substring)?;
+    let (substring, digit) = delimited(multispace0, digit1, multispace0)(substring)?;
 
     Ok((substring, digit.parse::<i32>().unwrap() * sign))
 }
 
+pub fn parse_i32_expr(input: &str) -> IResult<&str, Expr> {
+    let (substring, sign) = fold_many0(
+        delimited(multispace0, tag("-"), multispace0),
+        1,
+        |mut sign: i32, _| {
+            sign *= -1;
+            sign
+        },
+    )(input)?;
+
+    let (substring, digit) = delimited(multispace0, digit1, multispace0)(substring)?;
+
+    Ok((substring, Expr::Num(digit.parse::<i32>().unwrap() * sign)))
+}
+
+// Helper function to parse parentheses
+fn parse_parens(input: &str) -> IResult<&str,Expr> {
+    delimited(
+        multispace0,
+        delimited(
+            tag("("),
+            parse_expr_test, // this is just placeholder
+            tag(")")
+        ),
+        multispace0
+    )(input)
+}
+
+// works??
+// thanks Per
+// fix multispace
+pub fn parse_expr_test(input: &str) -> IResult<&str,Expr> {
+    alt((
+        map(
+            tuple((
+                alt((
+                    parse_i32_expr,
+                    parse_parens,
+                )),
+                parse_bin_op,
+                parse_expr_test
+            )),
+            |(l,op,r)| Expr::BinOp(Box::new(l),
+                                    op,
+                                    Box::new(r))
+        ),
+        parse_i32_expr,
+        parse_parens
+    ))(input)
+}
+
+// Reimplementation needed!
 // Parses binomial/arithmetic expressions
 pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = parse_i32(input)?;
@@ -98,33 +148,30 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     }
 }
 
+
+
 pub fn parse_bool(input: &str) -> IResult<&str, BoolState> {
-    preceded(
+    delimited(
         multispace0,
-        terminated(
-            alt((
+        alt((
                 map(tag("true"), |_| BoolState::True),
                 map(tag("false"), |_| BoolState::False),
-            )),
-            multispace0,
-        ),
+        )),
+        multispace0
     )(input)
 }
 
 pub fn parse_bool_op(input: &str) -> IResult<&str,BoolOp> {
-    preceded(
+    delimited(
         multispace0,
-        terminated(
-            alt((
-                map(tag("&&"), |_| BoolOp::And),
-                map(tag("||"), |_| BoolOp::Or),
-                map(tag("!"), |_| BoolOp::Not),
-                map(tag("<"), |_| BoolOp::Leq),
-                map(tag(">"), |_| BoolOp::Geq),
-                
-            )),
-            multispace0
-        )
+        alt((
+            map(tag("&&"), |_| BoolOp::And),
+            map(tag("||"), |_| BoolOp::Or),
+            map(tag("!"), |_| BoolOp::Not),
+            map(tag("<"), |_| BoolOp::Leq),
+            map(tag(">"), |_| BoolOp::Geq),                
+        )),
+        multispace0
     )(input)
 }
 
