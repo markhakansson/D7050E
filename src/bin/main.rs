@@ -11,7 +11,8 @@ fn main() {
     //println!("{:#?}", tree_sum);
     //println!("{:#?}", tree_decl);
 
-   let sum = "1+(1+((3+50)-2))+(2)";
-   let tree = parse_expr_test(sum);
+   //let sum = "1+(1+((3+50)-2))+(2)";
+   let sum = " 1  +  ( 2   +   2 / (2 - 5 ) )    ";
+   let tree = parse_bin_expr(sum);
    println!("{:#?}",tree);
 }

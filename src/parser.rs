@@ -98,17 +98,16 @@ fn parse_parens(input: &str) -> IResult<&str,Expr> {
         multispace0,
         delimited(
             tag("("),
-            parse_expr_test, // this is just placeholder
+            parse_bin_expr,
             tag(")")
         ),
         multispace0
     )(input)
 }
 
-// works??
-// thanks Per
-// fix multispace
-pub fn parse_expr_test(input: &str) -> IResult<&str,Expr> {
+// it works??
+// thanks Per!!
+pub fn parse_bin_expr(input: &str) -> IResult<&str,Expr> {
     alt((
         map(
             tuple((
@@ -117,20 +116,20 @@ pub fn parse_expr_test(input: &str) -> IResult<&str,Expr> {
                     parse_parens,
                 )),
                 parse_bin_op,
-                parse_expr_test
+                parse_bin_expr
             )),
-            |(l,op,r)| Expr::BinOp(Box::new(l),
+            |(left,op,right)| Expr::BinOp(Box::new(left),
                                     op,
-                                    Box::new(r))
+                                    Box::new(right))
         ),
         parse_i32_expr,
         parse_parens
     ))(input)
 }
 
-// Reimplementation needed!
+// Old implementation
 // Parses binomial/arithmetic expressions
-pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
+pub fn parse_bin_expr_old(input: &str) -> IResult<&str, Expr> {
     let (substring, digit) = parse_i32(input)?;
     if substring == ";" || substring.is_empty() {
         return Ok(("", Expr::Num(digit)));
@@ -182,54 +181,4 @@ pub fn parse_bool_op(input: &str) -> IResult<&str,BoolOp> {
 // Parse any type of expression
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
     alt((parse_bin_expr, parse_declaration))(input)
-}
-
-// If "(" found -> go down another level recursively
-// if ")" found -> go back recursively
-pub fn parse_nested(input: &str) -> IResult<&str, Expr> {
-    // base case not working for the second parsen in '))'
-    // no number before it might just return 0
-
-    // base case
-    //
-    // if substring = ")" or ";"
-    //      return Expr::Num(digit)
-    // if ))
-    //  return Expr::Num(0)
-
-    // recursion
-    //
-    // if str = "("
-    //  return parse_nestled(input[1..])
-    //
-    // else
-    //  return Expr:BinOp(
-    //              Box::new(Expr::Num(digit)),
-    //              operator,
-    //              Box::new(parse_nestled(substring)))
-
-    // 1 + (1+ (1 + 2)) + 9
-    
-    let (substring,first_char) = preceded(
-        multispace0,
-        terminated(
-            alt((
-                tag("("),
-                tag(")"),
-                tag(";"),
-                digit1,
-            )),
-            multispace0
-        )
-    )(input)?;
-
-    if first_char == "(" {
-        return parse_nested(substring);
-    } else if first_char == ")" {
-        
-    }
-
-
-    Ok(("",Expr::Num(0)))
-
 }
