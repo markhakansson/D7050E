@@ -8,7 +8,7 @@ impl Identifier {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum MathOp {
+pub enum MathToken {
     Minus,
     Plus,
     Multiply,
@@ -17,7 +17,7 @@ pub enum MathOp {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum BoolOp {
+pub enum BoolToken {
     And,
     Or,
     Not,
@@ -25,6 +25,12 @@ pub enum BoolOp {
     Geq,
     Equal,
     Neq,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Op {
+    MathOp(MathToken),
+    BoolOp(BoolToken),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -39,13 +45,48 @@ pub enum Type {
     Bool,
 }
 
-#[derive(Debug)]
-pub enum Expr {
-    BinOp(Box<Expr>, MathOp, Box<Expr>),
-    LogOp(Box<Expr>, BoolOp, Box<Expr>),
+#[derive(Debug, PartialEq, Eq)]
+pub struct Arg {
+    name: String,
+    literal_type: Type,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Function {
+    name: String,
+    arguments: Vec<Arg>,
+    block: Vec<Expr>,
+    return_type: Type,
+}
+
+impl Function {
+    pub fn new(name: String, arguments: Vec<Arg>, block: Vec<Expr>, return_type: Type) -> Function {
+        Function {
+            name,
+            arguments,
+            block,
+            return_type,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Value {
     Num(i32),
-    Var(Identifier),
-    Bool(BoolState),
-    Let(Identifier, Type, Box<Expr>),
-    If(Box<Expr>,Vec<Expr>)
+    Var(String),
+    Bool(bool),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Expr {
+    BinOp(Box<Expr>, Op, Box<Expr>),
+    Num(i32),    // value enum?
+    Var(String), // value
+    Bool(bool),  // value
+
+    Let(Box<Expr>, Type, Box<Expr>), // shold be moved to another enum
+    If(Box<Expr>, Vec<Expr>),        // should be moved to another enum
+    Else(Vec<Expr>),
+
+    Func(Function),
 }
