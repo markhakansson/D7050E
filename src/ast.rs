@@ -16,6 +16,7 @@ pub enum MathToken {
     Modulo,
 }
 
+// Need to handle Not
 #[derive(Debug, PartialEq, Eq)]
 pub enum BoolToken {
     And,
