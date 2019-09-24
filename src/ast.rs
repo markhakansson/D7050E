@@ -44,28 +44,36 @@ pub enum BoolState {
 pub enum Type {
     Int32,
     Bool,
+    Void, // for functions
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Arg {
+pub struct Param {
     name: String,
     literal_type: Type,
+}
+
+impl Param {
+    pub fn new(name: String, literal_type: Type) -> Param {
+        Param { name, literal_type }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Function {
     name: String,
-    arguments: Vec<Arg>,
-    block: Vec<Expr>,
+    params: Vec<Param>,
+    //block: Vec<Expr>,
     return_type: Type,
 }
 
 impl Function {
-    pub fn new(name: String, arguments: Vec<Arg>, block: Vec<Expr>, return_type: Type) -> Function {
+    //pub fn new(name: String, params: Vec<Param>, block: Vec<Expr>, return_type: Type) -> Function {
+    pub fn new(name: String, params: Vec<Param>, return_type: Type) -> Function {
         Function {
             name,
-            arguments,
-            block,
+            params,
+            //block,
             return_type,
         }
     }
@@ -81,13 +89,42 @@ pub enum Value {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     BinOp(Box<Expr>, Op, Box<Expr>),
-    Num(i32),    // value enum?
-    Var(String), // value
-    Bool(bool),  // value
-
+    Num(i32),                        // value enum?
+    Var(String),                     // value
+    Bool(bool),                      // value
     Let(Box<Expr>, Type, Box<Expr>), // shold be moved to another enum
-    If(Box<Expr>, Vec<Expr>),        // should be moved to another enum
+
+    If(Box<Expr>, Vec<Expr>), // should be moved to another enum
     Else(Vec<Expr>),
+    While,
+    For,
 
     Func(Function),
+}
+
+impl Into<Option<i32>> for Expr {
+    fn into(self) -> Option<i32> {
+        match self {
+            Expr::Num(i) => Some(i),
+            _ => None,
+        }
+    }
+}
+
+impl Into<Option<String>> for Expr {
+    fn into(self) -> Option<String> {
+        match self {
+            Expr::Var(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+impl Expr {
+    pub fn into_id(self) -> Option<String> {
+        match self {
+            Expr::Var(s) => Some(s),
+            _ => None,
+        }
+    }
 }

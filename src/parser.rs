@@ -7,25 +7,30 @@ use nom::{
     bytes::complete::{is_not, tag, take_till1, take_while, take_while1},
     character::complete::{alpha1, alphanumeric1, anychar, digit1, multispace0},
     combinator::{map, map_parser, peek},
-    multi::{fold_many0, many0_count},
+    multi::{fold_many0, many0},
     named,
     sequence::{delimited, pair, preceded, terminated, tuple},
     FindSubstring, IResult,
 };
 
 pub fn parse_identifier(input: &str) -> IResult<&str, Expr> {
-    preceded(
+    delimited(
         multispace0,
         //map(alphanumeric1, |s: &str| Identifier::new(s)),
         map(alphanumeric1, |s: &str| Expr::Var(s.to_string())),
+        multispace0,
     )(input)
 }
 
 pub fn parse_type(input: &str) -> IResult<&str, Type> {
-    alt((
-        map(tag("i32"), |_| Type::Int32),
-        map(tag("bool"), |_| Type::Bool),
-    ))(input)
+    delimited(
+        multispace0,
+        alt((
+            map(tag("i32"), |_| Type::Int32),
+            map(tag("bool"), |_| Type::Bool),
+        )),
+        multispace0,
+    )(input)
 }
 
 // Parses declaration of a variable
@@ -79,7 +84,6 @@ pub fn parse_bool(input: &str) -> IResult<&str, Expr> {
         alt((
             map(tag("true"), |_| Expr::Bool(true)),
             map(tag("false"), |_| Expr::Bool(false)),
-            map(alpha1, |i: &str| Expr::Var(i.to_string())),
         )),
         multispace0,
     )(input)
@@ -124,7 +128,7 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
-                alt((parse_bool, parse_i32, parse_parens_expr)),
+                alt((parse_bool, parse_i32, parse_parens_expr, parse_identifier)),
                 parse_any_op,
                 parse_bin_expr,
             )),
@@ -133,14 +137,79 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
         parse_bool,
         parse_i32,
         parse_parens_expr,
+        parse_identifier,
     ))(input)
 }
 
-pub fn parse_args(input: &str) {}
+pub fn parse_single_arg(input: &str) -> IResult<&str, Param> {
+    let (substring, (id, id_type)) = tuple((
+        delimited(multispace0, parse_identifier, multispace0),
+        delimited(tag(":"), preceded(multispace0, parse_type), multispace0),
+    ))(input)?;
 
-pub fn parse_function(input: &str) {}
+    let param = Param::new(id.into_id().unwrap(), id_type);
+
+    Ok((substring, param))
+}
+
+pub fn parse_args(input: &str) -> IResult<&str, Vec<Param>> {
+    many0(alt((
+        parse_single_arg,
+        preceded(tag(","), parse_single_arg),
+    )))(input)
+}
+
+// Parses blocks of Expr.
+fn parse_block(input: &str) {}
+
+pub fn parse_function(input: &str) -> IResult<&str, Function> {
+    let (substring, (id, params, return_type)) = tuple((
+        delimited(
+            multispace0,
+            preceded(tag("fn"), parse_identifier),
+            multispace0,
+        ),
+        delimited(tag("("), parse_args, tag(")")),
+        delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
+    ))(input)?;
+
+    let func = Function::new(id.into_id().unwrap(), params, return_type);
+    Ok((substring, func))
+}
 
 // Parse any type of expression
 pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
     alt((parse_declaration, parse_bin_expr))(input)
+}
+
+#[cfg(test)]
+mod parse_tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_i32() {
+        assert_eq!(parse_i32("3"), Ok(("", Expr::Num(3 as i32))));
+        assert_eq!(parse_i32("-3"), Ok(("", Expr::Num(-3 as i32))));
+        assert_eq!(parse_i32("500 + 50"), Ok(("+ 50", Expr::Num(500 as i32))));
+        assert_eq!(
+            parse_i32("- - 1000 --100 "),
+            Ok(("--100 ", Expr::Num(1000 as i32)))
+        );
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        assert_eq!(parse_bool("true"), Ok(("", Expr::Bool(true))));
+        assert_eq!(
+            parse_bool("  false && true"),
+            Ok(("&& true", Expr::Bool(false)))
+        );
+    }
+
+    #[test]
+    fn test_parse_type() {
+        assert_eq!(parse_type("i32"), Ok(("", Type::Int32)));
+        assert_eq!(parse_type(" bool : true;"), Ok((": true;", Type::Bool)))
+    }
+
 }

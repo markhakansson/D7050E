@@ -52,11 +52,10 @@ pub fn eval_bin_tree(e: Expr) -> i32 {
     let mut sum: i32 = 0;
 
     match e {
-        Expr::Var(var) => println!("var: {:?}", var),
+        //Expr::Var(var) => println!("var: {:?}", var),
         Expr::BinOp(left, op, right) => {
             sum = eval_arithmetic_expr(eval_bin_tree(*left), op, eval_bin_tree(*right))
         }
-
         Expr::Num(num) => sum = num,
         _ => (),
     }

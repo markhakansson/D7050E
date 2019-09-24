@@ -3,17 +3,6 @@ extern crate d7050e;
 use crate::d7050e::ast::*;
 use crate::d7050e::parser::*;
 
-#[test]
-fn test_parse_i32() {
-    assert_eq!(parse_i32("3"), Ok(("", Expr::Num(3 as i32))));
-    assert_eq!(parse_i32("-3"), Ok(("", Expr::Num(-3 as i32))));
-    assert_eq!(parse_i32("500 + 50"), Ok(("+ 50", Expr::Num(500 as i32))));
-    assert_eq!(
-        parse_i32("- - 1000 --100 "),
-        Ok(("--100 ", Expr::Num(1000 as i32)))
-    );
-}
-
 /* #[test]
 fn test_parse_bin_op() {
     assert_eq!(parse_bin_op("+"),Ok(("",MathOp::Plus)));
