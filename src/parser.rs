@@ -16,7 +16,6 @@ use nom::{
 pub fn parse_identifier(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
-        //map(alphanumeric1, |s: &str| Identifier::new(s)),
         map(alphanumeric1, |s: &str| Expr::Var(s.to_string())),
         multispace0,
     )(input)
@@ -35,7 +34,7 @@ pub fn parse_type(input: &str) -> IResult<&str, Type> {
 
 // Parses declaration of a variable
 pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
-    let (_, (id, type_lit, expr)): (&str, (Expr, Type, Expr)) = tuple((
+    let (substring, (id, type_lit, expr)): (&str, (Expr, Type, Expr)) = tuple((
         preceded(
             multispace0,
             preceded(tag("let"), preceded(multispace0, parse_identifier)),
@@ -46,11 +45,14 @@ pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
         ),
         preceded(
             multispace0,
-            preceded(tag("="), preceded(multispace0, parse_expr)),
+            preceded(
+                tag("="),
+                delimited(multispace0, parse_right_expr, multispace0),
+            ),
         ),
     ))(input)?;
 
-    Ok(("", Expr::Let(Box::new(id), type_lit, Box::new(expr))))
+    Ok((substring, Expr::Let(Box::new(id), type_lit, Box::new(expr))))
 }
 
 // Parses any i32. Handles multiple negative signs.
@@ -70,10 +72,10 @@ pub fn parse_i32(input: &str) -> IResult<&str, Expr> {
 }
 
 // Helper function to parse parentheses
-pub fn parse_parens_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_parens_expr(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
-        delimited(tag("("), parse_expr, tag(")")),
+        delimited(tag("("), parse_right_expr, tag(")")),
         multispace0,
     )(input)
 }
@@ -141,45 +143,71 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     ))(input)
 }
 
-pub fn parse_single_arg(input: &str) -> IResult<&str, Param> {
-    let (substring, (id, id_type)) = tuple((
-        delimited(multispace0, parse_identifier, multispace0),
-        delimited(tag(":"), preceded(multispace0, parse_type), multispace0),
-    ))(input)?;
+fn parse_single_arg(input: &str) -> IResult<&str, Param> {
+    let (substring, (id, id_type)) =
+        tuple((terminated(parse_identifier, tag(":")), parse_type))(input)?;
 
-    let param = Param::new(id.into_id().unwrap(), id_type);
+    let param = Param::new(id.into(), id_type);
 
     Ok((substring, param))
 }
 
-pub fn parse_args(input: &str) -> IResult<&str, Vec<Param>> {
+pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Param>> {
     many0(alt((
         parse_single_arg,
         preceded(tag(","), parse_single_arg),
     )))(input)
 }
 
-// Parses blocks of Expr.
-fn parse_block(input: &str) {}
+// Parses blocks of keyword statements.
+pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+    many0(alt((
+        terminated(parse_keyword, terminated(tag(";"), multispace0)),
+        parse_return,
+    )))(input)
+}
 
-pub fn parse_function(input: &str) -> IResult<&str, Function> {
-    let (substring, (id, params, return_type)) = tuple((
+// Parses return-statements
+pub fn parse_return(input: &str) -> IResult<&str, Expr> {
+    let (substring, ret) = preceded(tag("return"), parse_right_expr)(input)?;
+
+    Ok((substring, Expr::Return(Box::new(ret))))
+}
+
+pub fn parse_function(input: &str) -> IResult<&str, Expr> {
+    let (substring, (id, params, return_type, block)) = tuple((
         delimited(
             multispace0,
             preceded(tag("fn"), parse_identifier),
             multispace0,
         ),
-        delimited(tag("("), parse_args, tag(")")),
+        delimited(tag("("), parse_fn_args, tag(")")),
         delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
+        delimited(tag("{"), parse_block, tag("}")),
     ))(input)?;
 
-    let func = Function::new(id.into_id().unwrap(), params, return_type);
-    Ok((substring, func))
+    let func = Function::new(id.into(), params, block, return_type);
+    Ok((substring, Expr::Func(func)))
 }
 
-// Parse any type of expression
-pub fn parse_expr(input: &str) -> IResult<&str, Expr> {
-    alt((parse_declaration, parse_bin_expr))(input)
+// wip
+pub fn parse_if(input: &str) {
+    let (subsstring, exp) =
+        preceded(tag("if"), preceded(multispace0, parse_bin_expr))(input).unwrap();
+
+    println!("{:#?}", exp)
+}
+
+//fn parse_else(input: &str) -> IResult<&str,Expr> {}
+
+// Parses keywords such as 'let', 'fn', 'if' etc.
+pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
+    alt((parse_return, parse_declaration, parse_function))(input)
+}
+
+// Parses right-hand expressions
+pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
+    parse_bin_expr(input)
 }
 
 #[cfg(test)]

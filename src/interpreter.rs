@@ -19,11 +19,11 @@ fn eval_bin_expr(first: i32, operator: Op, second: i32) -> i32 {
 
 fn eval_arithmetic_expr(first: i32, operator: Op, second: i32) -> i32 {
     match operator {
-        Op::MathOp(MathToken::Division) => return first / second,
-        Op::MathOp(MathToken::Multiply) => return first * second,
-        Op::MathOp(MathToken::Plus) => return first + second,
-        Op::MathOp(MathToken::Minus) => return first - second,
-        Op::MathOp(MathToken::Modulo) => return first % second,
+        Op::MathOp(MathToken::Division) => first / second,
+        Op::MathOp(MathToken::Multiply) => first * second,
+        Op::MathOp(MathToken::Plus) => first + second,
+        Op::MathOp(MathToken::Minus) => first - second,
+        Op::MathOp(MathToken::Modulo) => first % second,
         _ => panic!(
             "Expected MathOp with MathToken. Found unknown value: {:?}",
             operator
@@ -33,12 +33,12 @@ fn eval_arithmetic_expr(first: i32, operator: Op, second: i32) -> i32 {
 
 fn eval_bool_expr(first: bool, operator: Op, second: bool) -> bool {
     match operator {
-        Op::BoolOp(BoolToken::And) => return first && second,
-        Op::BoolOp(BoolToken::Equal) => return first == second,
-        Op::BoolOp(BoolToken::Geq) => return first > second,
-        Op::BoolOp(BoolToken::Leq) => return first < second,
-        Op::BoolOp(BoolToken::Neq) => return first != second,
-        Op::BoolOp(BoolToken::Or) => return first || second,
+        Op::BoolOp(BoolToken::And) => first && second,
+        Op::BoolOp(BoolToken::Equal) => first == second,
+        Op::BoolOp(BoolToken::Geq) => first > second,
+        Op::BoolOp(BoolToken::Leq) => first < second,
+        Op::BoolOp(BoolToken::Neq) => first != second,
+        Op::BoolOp(BoolToken::Or) => first || second,
         _ => panic!(
             "Expected BoolOp with BoolToken. Found unknown value: {:?}",
             operator

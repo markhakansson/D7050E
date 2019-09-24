@@ -50,12 +50,12 @@ pub enum Type {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Param {
     name: String,
-    literal_type: Type,
+    param_type: Type,
 }
 
 impl Param {
-    pub fn new(name: String, literal_type: Type) -> Param {
-        Param { name, literal_type }
+    pub fn new(name: String, param_type: Type) -> Param {
+        Param { name, param_type }
     }
 }
 
@@ -63,17 +63,16 @@ impl Param {
 pub struct Function {
     name: String,
     params: Vec<Param>,
-    //block: Vec<Expr>,
+    block: Vec<Expr>,
     return_type: Type,
 }
 
 impl Function {
-    //pub fn new(name: String, params: Vec<Param>, block: Vec<Expr>, return_type: Type) -> Function {
-    pub fn new(name: String, params: Vec<Param>, return_type: Type) -> Function {
+    pub fn new(name: String, params: Vec<Param>, block: Vec<Expr>, return_type: Type) -> Function {
         Function {
             name,
             params,
-            //block,
+            block,
             return_type,
         }
     }
@@ -88,43 +87,44 @@ pub enum Value {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
+    // Right-hand expressions
     BinOp(Box<Expr>, Op, Box<Expr>),
-    Num(i32),                        // value enum?
-    Var(String),                     // value
-    Bool(bool),                      // value
+    Num(i32),    // value enum?
+    Var(String), // value
+    Bool(bool),  // value
+
+    // Keywords
     Let(Box<Expr>, Type, Box<Expr>), // shold be moved to another enum
-
-    If(Box<Expr>, Vec<Expr>), // should be moved to another enum
-    Else(Vec<Expr>),
-    While,
-    For,
-
+    If(Box<Expr>, Vec<Expr>),        // should be moved to another enum
+    IfElse(Box<Expr>, Vec<Expr>),
+    While(Box<Expr>, Vec<Expr>),
     Func(Function),
+    Return(Box<Expr>),
 }
 
-impl Into<Option<i32>> for Expr {
-    fn into(self) -> Option<i32> {
-        match self {
-            Expr::Num(i) => Some(i),
-            _ => None,
+impl From<Expr> for i32 {
+    fn from(e: Expr) -> i32 {
+        match e {
+            Expr::Num(i) => i,
+            _ => panic!(),
         }
     }
 }
 
-impl Into<Option<String>> for Expr {
-    fn into(self) -> Option<String> {
-        match self {
-            Expr::Var(s) => Some(s),
-            _ => None,
+impl From<Expr> for String {
+    fn from(e: Expr) -> String {
+        match e {
+            Expr::Var(s) => s,
+            _ => panic!(),
         }
     }
 }
 
-impl Expr {
-    pub fn into_id(self) -> Option<String> {
-        match self {
-            Expr::Var(s) => Some(s),
-            _ => None,
+impl From<Expr> for bool {
+    fn from(e: Expr) -> bool {
+        match e {
+            Expr::Bool(b) => b,
+            _ => panic!(),
         }
     }
 }
