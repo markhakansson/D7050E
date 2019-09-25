@@ -5,29 +5,20 @@ use crate::d7050e::interpreter::*;
 use crate::d7050e::parser::*;
 
 fn main() {
-    let func = "fn test(a: i32, b: i32) -> i32 {
-        let c: i32 = a + b + 100;
-        return c;
+/*     let function = "
+    fn func(a: i32, b: bool, c :i32) -> i32 {
+        let d: bool = a == c;
+        let hej: bool = ((1+3) == 4) == true;
+        if b && d == true {
+            return 0;
+        };
     }";
+    let tree = parse_keyword(function);
+    println!("{:#?}", tree); */
 
-    let fn_tree = parse_function(func);
-    println!("{:#?}", fn_tree);
-
-    /*     let block =
-    "let a: i32 = 1 + 3;
-    let b: bool = true;";
-
-    let block_tree = parse_block(block);
-    println!("{:#?}", block_tree); */
-
-    /*     let decl = "let a: i32 = 1 + 3;}";
-    let a = parse_declaration(decl);
-    println!("{:#?}",a); */
-
-    /* let ret = parse_return("return a\n");
-    println!("{:#?}",ret); */
-
-    /*     let ifs = "if a == b";
-    let tree = parse_if(ifs);
-    println!("{:#?}",tree); */
+    //let a = "1 + 3 + 5 - (5*3);";
+    let a = "1 == 1";
+    let tree = parse_right_expr(a).unwrap().1;
+    let intr = eval_bin_tree(tree);
+    println!("{:#?}",intr);
 }

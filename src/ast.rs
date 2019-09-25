@@ -22,6 +22,14 @@ pub enum BoolToken {
     And,
     Or,
     Not,
+    /*     Leq,
+    Geq,
+    Equal,
+    Neq, */
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RelToken {
     Leq,
     Geq,
     Equal,
@@ -32,6 +40,7 @@ pub enum BoolToken {
 pub enum Op {
     MathOp(MathToken),
     BoolOp(BoolToken),
+    RelOp(RelToken),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -128,3 +137,5 @@ impl From<Expr> for bool {
         }
     }
 }
+
+

@@ -98,10 +98,23 @@ pub fn parse_bool_op(input: &str) -> IResult<&str, Op> {
             map(tag("&&"), |_| Op::BoolOp(BoolToken::And)),
             map(tag("||"), |_| Op::BoolOp(BoolToken::Or)),
             map(tag("!"), |_| Op::BoolOp(BoolToken::Not)),
-            map(tag("<"), |_| Op::BoolOp(BoolToken::Leq)),
+            /*             map(tag("<"), |_| Op::BoolOp(BoolToken::Leq)),
             map(tag(">"), |_| Op::BoolOp(BoolToken::Geq)),
             map(tag("=="), |_| Op::BoolOp(BoolToken::Equal)),
-            map(tag("!="), |_| Op::BoolOp(BoolToken::Neq)),
+            map(tag("!="), |_| Op::BoolOp(BoolToken::Neq)), */
+        )),
+        multispace0,
+    )(input)
+}
+
+pub fn parse_rel_op(input: &str) -> IResult<&str, Op> {
+    delimited(
+        multispace0,
+        alt((
+            map(tag("=="), |_| Op::RelOp(RelToken::Equal)),
+            map(tag("<"), |_| Op::RelOp(RelToken::Leq)),
+            map(tag(">"), |_| Op::RelOp(RelToken::Geq)),
+            map(tag("!="), |_| Op::RelOp(RelToken::Neq)),
         )),
         multispace0,
     )(input)
@@ -122,7 +135,7 @@ pub fn parse_math_op(input: &str) -> IResult<&str, Op> {
 }
 
 pub fn parse_any_op(input: &str) -> IResult<&str, Op> {
-    alt((parse_bool_op, parse_math_op))(input)
+    alt((parse_bool_op, parse_math_op, parse_rel_op))(input)
 }
 
 // Parses arithmetic and logical binomial expressions.
@@ -190,19 +203,24 @@ pub fn parse_function(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::Func(func)))
 }
 
-// wip
-pub fn parse_if(input: &str) {
-    let (subsstring, exp) =
-        preceded(tag("if"), preceded(multispace0, parse_bin_expr))(input).unwrap();
+// Parses lonely if statements
+pub fn parse_if(input: &str) -> IResult<&str, Expr> {
+    let (substring, (_, exp, _, block, _)) = tuple((
+        delimited(multispace0, tag("if"), multispace0),
+        parse_bin_expr,
+        delimited(multispace0, tag("{"), multispace0),
+        delimited(multispace0, parse_block, multispace0),
+        delimited(multispace0, tag("}"), multispace0),
+    ))(input)?;
 
-    println!("{:#?}", exp)
+    Ok((substring, Expr::If(Box::new(exp), block)))
 }
 
 //fn parse_else(input: &str) -> IResult<&str,Expr> {}
 
 // Parses keywords such as 'let', 'fn', 'if' etc.
 pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
-    alt((parse_return, parse_declaration, parse_function))(input)
+    alt((parse_return, parse_declaration, parse_function, parse_if))(input)
 }
 
 // Parses right-hand expressions
