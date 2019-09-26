@@ -3,17 +3,17 @@ extern crate nom;
 use crate::ast::*;
 
 use nom::{
-    branch::{alt, permutation},
-    bytes::complete::{is_not, tag, take_till1, take_while, take_while1},
-    character::complete::{alpha1, alphanumeric1, anychar, digit1, multispace0},
-    combinator::{map, map_parser, peek},
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{alphanumeric1, digit1, multispace0},
+    combinator::map,
     multi::{fold_many0, many0},
-    named,
-    sequence::{delimited, pair, preceded, terminated, tuple},
-    FindSubstring, IResult,
+    sequence::{delimited, preceded, terminated, tuple},
+    IResult,
 };
 
-pub fn parse_identifier(input: &str) -> IResult<&str, Expr> {
+// Parses the name of any variable to the AST Var type.
+pub fn parse_var(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         map(alphanumeric1, |s: &str| Expr::Var(s.to_string())),
@@ -37,7 +37,7 @@ pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, type_lit, expr)): (&str, (Expr, Type, Expr)) = tuple((
         preceded(
             multispace0,
-            preceded(tag("let"), preceded(multispace0, parse_identifier)),
+            preceded(tag("let"), preceded(multispace0, parse_var)),
         ),
         preceded(
             multispace0,
@@ -98,10 +98,6 @@ pub fn parse_bool_op(input: &str) -> IResult<&str, Op> {
             map(tag("&&"), |_| Op::BoolOp(BoolToken::And)),
             map(tag("||"), |_| Op::BoolOp(BoolToken::Or)),
             map(tag("!"), |_| Op::BoolOp(BoolToken::Not)),
-            /*             map(tag("<"), |_| Op::BoolOp(BoolToken::Leq)),
-            map(tag(">"), |_| Op::BoolOp(BoolToken::Geq)),
-            map(tag("=="), |_| Op::BoolOp(BoolToken::Equal)),
-            map(tag("!="), |_| Op::BoolOp(BoolToken::Neq)), */
         )),
         multispace0,
     )(input)
@@ -134,6 +130,19 @@ pub fn parse_math_op(input: &str) -> IResult<&str, Op> {
     )(input)
 }
 
+pub fn parse_var_op(input: &str) -> IResult<&str, Op> {
+    delimited(
+        multispace0,
+        alt((
+            map(tag("="), |_| Op::VarOp(VarToken::Assign)),
+            map(tag("+="), |_| Op::VarOp(VarToken::PlusEq)),
+            map(tag("-="), |_| Op::VarOp(VarToken::MinEq)),
+            map(tag("*="), |_| Op::VarOp(VarToken::MulEq)),
+        )),
+        multispace0,
+    )(input)
+}
+
 pub fn parse_any_op(input: &str) -> IResult<&str, Op> {
     alt((parse_bool_op, parse_math_op, parse_rel_op))(input)
 }
@@ -143,7 +152,7 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
-                alt((parse_bool, parse_i32, parse_parens_expr, parse_identifier)),
+                alt((parse_bool, parse_i32, parse_parens_expr, parse_var)),
                 parse_any_op,
                 parse_bin_expr,
             )),
@@ -152,13 +161,12 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
         parse_bool,
         parse_i32,
         parse_parens_expr,
-        parse_identifier,
+        parse_var,
     ))(input)
 }
 
 fn parse_single_arg(input: &str) -> IResult<&str, Param> {
-    let (substring, (id, id_type)) =
-        tuple((terminated(parse_identifier, tag(":")), parse_type))(input)?;
+    let (substring, (id, id_type)) = tuple((terminated(parse_var, tag(":")), parse_type))(input)?;
 
     let param = Param::new(id.into(), id_type);
 
@@ -166,18 +174,26 @@ fn parse_single_arg(input: &str) -> IResult<&str, Param> {
 }
 
 pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Param>> {
-    many0(alt((
-        parse_single_arg,
-        preceded(tag(","), parse_single_arg),
-    )))(input)
+    delimited(
+        multispace0,
+        many0(alt((
+            parse_single_arg,
+            preceded(tag(","), parse_single_arg),
+        ))),
+        multispace0,
+    )(input)
 }
 
 // Parses blocks of keyword statements.
 pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
-    many0(alt((
-        terminated(parse_keyword, terminated(tag(";"), multispace0)),
-        parse_return,
-    )))(input)
+    delimited(
+        tag("{"),
+        many0(alt((
+            terminated(parse_keyword, terminated(tag(";"), multispace0)),
+            parse_return,
+        ))),
+        tag("}"),
+    )(input)
 }
 
 // Parses return-statements
@@ -189,14 +205,10 @@ pub fn parse_return(input: &str) -> IResult<&str, Expr> {
 
 pub fn parse_function(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, params, return_type, block)) = tuple((
-        delimited(
-            multispace0,
-            preceded(tag("fn"), parse_identifier),
-            multispace0,
-        ),
-        delimited(tag("("), parse_fn_args, tag(")")),
+        delimited(multispace0, preceded(tag("fn"), parse_var), multispace0),
+        parse_fn_args,
         delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
-        delimited(tag("{"), parse_block, tag("}")),
+        parse_block,
     ))(input)?;
 
     let func = Function::new(id.into(), params, block, return_type);
@@ -205,12 +217,10 @@ pub fn parse_function(input: &str) -> IResult<&str, Expr> {
 
 // Parses lonely if statements
 pub fn parse_if(input: &str) -> IResult<&str, Expr> {
-    let (substring, (_, exp, _, block, _)) = tuple((
+    let (substring, (_, exp, block)) = tuple((
         delimited(multispace0, tag("if"), multispace0),
         parse_bin_expr,
-        delimited(multispace0, tag("{"), multispace0),
         delimited(multispace0, parse_block, multispace0),
-        delimited(multispace0, tag("}"), multispace0),
     ))(input)?;
 
     Ok((substring, Expr::If(Box::new(exp), block)))
@@ -218,14 +228,47 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
 
 //fn parse_else(input: &str) -> IResult<&str,Expr> {}
 
+pub fn parse_while(input: &str) -> IResult<&str, Expr> {
+    let (substring, (_, expr, block)) = tuple((
+        delimited(multispace0, tag("while"), multispace0),
+        parse_right_expr,
+        parse_block,
+    ))(input)?;
+
+    Ok((substring, Expr::While(Box::new(expr), block)))
+}
+
+// Parses variable assignments where the variable has already
+// been declared. E.g. 'a = 3;'.
+pub fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
+    let (substring, (var, op, expr)) = tuple((parse_var, parse_var_op, parse_right_expr))(input)?;
+
+    Ok((substring, Expr::VarOp(Box::new(var), op, Box::new(expr))))
+}
+
 // Parses keywords such as 'let', 'fn', 'if' etc.
 pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
-    alt((parse_return, parse_declaration, parse_function, parse_if))(input)
+    delimited(
+        multispace0,
+        alt((
+            parse_return,
+            parse_declaration,
+            parse_function,
+            parse_if,
+            parse_while,
+            parse_var_expr,
+        )),
+        multispace0,
+    )(input)
 }
 
 // Parses right-hand expressions
 pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
-    parse_bin_expr(input)
+    delimited(
+        multispace0,
+        parse_bin_expr,
+        multispace0,
+    )(input)
 }
 
 #[cfg(test)]
@@ -256,6 +299,11 @@ mod parse_tests {
     fn test_parse_type() {
         assert_eq!(parse_type("i32"), Ok(("", Type::Int32)));
         assert_eq!(parse_type(" bool : true;"), Ok((": true;", Type::Bool)))
+    }
+
+    #[test]
+    fn test_parse_right_expr() {
+        assert_eq!(parse_right_expr("a = 2").is_ok(),true);
     }
 
 }

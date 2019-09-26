@@ -21,11 +21,7 @@ pub enum MathToken {
 pub enum BoolToken {
     And,
     Or,
-    Not,
-    /*     Leq,
-    Geq,
-    Equal,
-    Neq, */
+    Not, // implementation neeeded
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -37,10 +33,19 @@ pub enum RelToken {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum VarToken {
+    Assign,
+    PlusEq,
+    MinEq,
+    MulEq,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum Op {
     MathOp(MathToken),
     BoolOp(BoolToken),
     RelOp(RelToken),
+    VarOp(VarToken),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -98,13 +103,14 @@ pub enum Value {
 pub enum Expr {
     // Right-hand expressions
     BinOp(Box<Expr>, Op, Box<Expr>),
-    Num(i32),    // value enum?
-    Var(String), // value
-    Bool(bool),  // value
+    Num(i32),
+    Var(String),
+    Bool(bool),
 
-    // Keywords
-    Let(Box<Expr>, Type, Box<Expr>), // shold be moved to another enum
-    If(Box<Expr>, Vec<Expr>),        // should be moved to another enum
+    // Keywords (coud be moved to another enum?)
+    Let(Box<Expr>, Type, Box<Expr>),
+    VarOp(Box<Expr>, Op, Box<Expr>),
+    If(Box<Expr>, Vec<Expr>),
     IfElse(Box<Expr>, Vec<Expr>),
     While(Box<Expr>, Vec<Expr>),
     Func(Function),
@@ -137,5 +143,3 @@ impl From<Expr> for bool {
         }
     }
 }
-
-
