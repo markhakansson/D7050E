@@ -94,7 +94,7 @@ impl Function {
 
 // Value, Keyword, NewExpr (rename to Expr), Node (same functionality
 // as the old Expr) should be used instead of only Expr
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum Value {
     Num(i32),
     Var(String),

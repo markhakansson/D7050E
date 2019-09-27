@@ -1,5 +1,7 @@
-use crate::ast::{*,Value};
+use crate::ast::{*,Value::{Num,Bool,Var}};
 use std::collections::HashMap;
+
+type Scope = HashMap<Value, Value>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum EvalErr {
@@ -45,14 +47,26 @@ fn eval_bin_expr(l: Value, op: Op, r: Value) -> Result<Value, EvalErr> {
     }
 }
 
+pub fn eval_assign_var(var: Expr, var_ty: Type, expr: Expr) {
+
+}
+
 // Evaluates a complete binomial tree to a single integer or bool.
-pub fn eval_tree(e: Expr) -> Result<Value, EvalErr> {
+pub fn eval_tree(e: Expr, map: &mut Scope) -> Result<(Value, &Scope), EvalErr> {
     match e {
-        Expr::Num(num) => Ok(Value::Num(num)),
-        Expr::Bool(b) => Ok(Value::Bool(b)),
-        Expr::Var(s) => Ok(Value::Var(s)),
+        Expr::Num(num) => Ok((Num(num), map)),
+        Expr::Bool(b) => Ok((Bool(b), map)),
+        Expr::Var(s) => Ok((Var(s), map)),
         Expr::BinOp(left, op, right) => {
-            eval_bin_expr(eval_tree(*left)?, op, eval_tree(*right)?)
+            let (l_val, _) = eval_tree(*left, map)?;
+            let (r_val, _) = eval_tree(*right, map)?;
+            Ok((eval_bin_expr(l_val, op, r_val)?, map))
+        },
+        Expr::Let(var, var_ty, expr) => {
+            let mut id = Var(String::from(*var));
+            let (exp_val,_) = eval_tree(*expr, map)?; 
+            map.insert(id, exp_val.clone());
+            Ok( (exp_val, map) )
         },
         _ => panic!(),
     }
@@ -62,5 +76,9 @@ pub fn eval_keyword_tree(e: Expr) {
 
 }
 
-pub fn test_eval() {
+pub fn test_eval(e: Expr) {
+    let mut map: HashMap<Value,Value> = HashMap::new();
+    let (val,hash) = eval_tree(e, &mut map).unwrap();
+    println!("Val: {:#?}, HashMap: {:#?}",val,hash);
 }
+

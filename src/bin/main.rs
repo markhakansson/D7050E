@@ -5,7 +5,7 @@ use crate::d7050e::interpreter::*;
 use crate::d7050e::parser::*;
 
 fn main() {
-    let function = "
+/*     let function = "
     fn func(a: i32, b: bool, c :i32) -> i32 {
         let d: bool = a == c;
         let hej: bool = ((1+3) == 4) == true;
@@ -14,13 +14,15 @@ fn main() {
         };
     }";
     let tree = parse_keyword(function);
-    println!("{:#?}", tree);
+    println!("{:#?}", tree); */
 
     //let a = "1 + 3 + 5 - (5*3);";
-    /*     let a = "1 + 3 + 5 + true";
-    let tree = parse_right_expr(a).unwrap().1;
-    let intr = eval_bin_tree(tree);
-    println!("{:#?}", intr); */
+    //let a = "1 + 3 + 5 + true";
+    let a = "let d: i32 = 1 + 3 + 5 / 5;";
+    let tree = parse_keyword(a).unwrap().1;
+    println!("{:#?}",tree);
+    let intr = test_eval(tree);
+    println!("{:#?}", intr);
 
     /*     let test = "if true {
         let a: i32 = 0;
