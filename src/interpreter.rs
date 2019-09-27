@@ -1,43 +1,5 @@
-use crate::ast::*;
+use crate::ast::{*,Value};
 use std::collections::HashMap;
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Value {
-    Num(i32),
-    Bool(bool),
-}
-
-impl From<i32> for Value {
-    fn from(i: i32) -> Self {
-        Value::Num(i)
-    }
-}
-
-impl From<bool> for Value {
-    fn from(b: bool) -> Self {
-        Value::Bool(b)
-    }
-}
-
-// Implement TryForm trait instead to get a Result back
-impl From<Value> for i32 {
-    fn from(v: Value) -> i32 {
-        match v {
-            Value::Num(i) => i,
-            _ => panic!("Could not convert to i32. Wrong type."),
-        }
-    }
-}
-
-// Implement TryForm trait instead to get a Result back
-impl From<Value> for bool {
-    fn from(v: Value) -> bool {
-        match v {
-            Value::Bool(b) => b,
-            _ => panic!("Could not convert bool. Wrong type."),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum EvalErr {
@@ -84,13 +46,21 @@ fn eval_bin_expr(l: Value, op: Op, r: Value) -> Result<Value, EvalErr> {
 }
 
 // Evaluates a complete binomial tree to a single integer or bool.
-pub fn eval_bin_tree(e: Expr) -> Result<Value, EvalErr> {
+pub fn eval_tree(e: Expr) -> Result<Value, EvalErr> {
     match e {
         Expr::Num(num) => Ok(Value::Num(num)),
         Expr::Bool(b) => Ok(Value::Bool(b)),
+        Expr::Var(s) => Ok(Value::Var(s)),
         Expr::BinOp(left, op, right) => {
-            eval_bin_expr(eval_bin_tree(*left)?, op, eval_bin_tree(*right)?)
-        }
+            eval_bin_expr(eval_tree(*left)?, op, eval_tree(*right)?)
+        },
         _ => panic!(),
     }
+}
+
+pub fn eval_keyword_tree(e: Expr) {
+
+}
+
+pub fn test_eval() {
 }

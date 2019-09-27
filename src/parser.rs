@@ -176,10 +176,14 @@ fn parse_single_arg(input: &str) -> IResult<&str, Param> {
 pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Param>> {
     delimited(
         multispace0,
-        many0(alt((
-            parse_single_arg,
-            preceded(tag(","), parse_single_arg),
-        ))),
+        delimited(
+            tag("("),
+            many0(alt((
+                parse_single_arg,
+                preceded(tag(","), parse_single_arg),
+            ))),
+            tag(")"),
+        ),
         multispace0,
     )(input)
 }
@@ -219,7 +223,7 @@ pub fn parse_function(input: &str) -> IResult<&str, Expr> {
 pub fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (_, exp, block)) = tuple((
         delimited(multispace0, tag("if"), multispace0),
-        parse_bin_expr,
+        alt((parse_bin_expr, parse_var_expr)),
         delimited(multispace0, parse_block, multispace0),
     ))(input)?;
 
@@ -264,11 +268,7 @@ pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
 
 // Parses right-hand expressions
 pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
-    delimited(
-        multispace0,
-        parse_bin_expr,
-        multispace0,
-    )(input)
+    delimited(multispace0, parse_bin_expr, multispace0)(input)
 }
 
 #[cfg(test)]
@@ -303,7 +303,31 @@ mod parse_tests {
 
     #[test]
     fn test_parse_right_expr() {
-        assert_eq!(parse_right_expr("a = 2").is_ok(),true);
+        assert_eq!(parse_right_expr("a = 2").is_ok(), true);
+        assert_eq!(parse_right_expr("1 + 3 + 4 / 50").is_ok(), true);
+    }
+
+    #[test]
+    fn test_parse_keyword() {
+        assert_eq!(parse_keyword("return 1 + 2").is_ok(), true);
+        assert_eq!(parse_keyword("let a: i32 = 1 + 3;").is_ok(), true);
+        assert_eq!(parse_keyword("if a == true { return 0; }").is_ok(), true);
+        assert_eq!(parse_keyword("while true { return 1; }").is_ok(), true);
+        assert_eq!(parse_keyword("a += 5;").is_ok(), true);
+        assert_eq!(
+            parse_keyword(
+                "
+            fn func(a: i32, b: bool, c :i32) -> i32 {
+                let d: bool = a == c;
+                let hej: bool = ((1+3) == 4) == true;
+                if b && d == true {
+                    return 0;
+                };
+            }"
+            )
+            .is_ok(),
+            true
+        );
     }
 
 }
