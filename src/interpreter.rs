@@ -47,32 +47,37 @@ fn eval_bin_expr(l: Value, op: Op, r: Value) -> Result<Value, EvalErr> {
     }
 }
 
-pub fn eval_assign_var(var: Expr, var_ty: Type, expr: Expr) {
-
-}
+/* pub fn eval_assign_var(var: Expr, var_ty: Type, expr: Expr, map: &mut Scope) -> Result<(Value, &Scope), EvalErr> {
+    let mut id = Var(String::from(var));
+    let (expr_val,_) = eval_tree(expr, map)?; 
+    map.insert(id, expr_val.clone());
+    Ok( (expr_val, map) ) 
+} */
 
 // Evaluates a complete binomial tree to a single integer or bool.
 pub fn eval_tree(e: Expr, map: &mut Scope) -> Result<(Value, &Scope), EvalErr> {
     match e {
         Expr::Num(num) => Ok((Num(num), map)),
         Expr::Bool(b) => Ok((Bool(b), map)),
-        Expr::Var(s) => Ok((Var(s), map)),
+        Expr::Var(s) => Ok((Var(s), map)), // fix so it returns the value from the var
         Expr::BinOp(left, op, right) => {
             let (l_val, _) = eval_tree(*left, map)?;
             let (r_val, _) = eval_tree(*right, map)?;
             Ok((eval_bin_expr(l_val, op, r_val)?, map))
         },
-        Expr::Let(var, var_ty, expr) => {
-            let mut id = Var(String::from(*var));
-            let (exp_val,_) = eval_tree(*expr, map)?; 
-            map.insert(id, exp_val.clone());
-            Ok( (exp_val, map) )
+        Expr::Let(var, var_ty, expr) => { // not sure how to deal with type. ignore it for now
+            let id = Var(String::from(*var));
+            let (expr_val,_) = eval_tree(*expr, map)?; 
+            map.insert(id, expr_val.clone());
+            Ok( (expr_val, map) )
         },
         _ => panic!(),
     }
 }
 
-pub fn eval_keyword_tree(e: Expr) {
+// Gets the value for a variable in the hashmap
+fn get_value(var: Value, map: &mut Scope) {
+    
 
 }
 
