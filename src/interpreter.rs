@@ -56,22 +56,24 @@ fn eval_bin_expr(l: Value, op: Op, r: Value) -> Result<Value, EvalErr> {
 } */
 
 // Evaluates a complete binomial tree to a single integer or bool.
-pub fn eval_expr(e: Expr, map: &mut Scope) -> Result<Value, EvalErr> {
+pub fn eval_expr(e: Expr, context: &mut Vec<Scope>) -> Result<Value, EvalErr> {
     match e {
         Expr::Num(num) => Ok(Num(num)),
         Expr::Bool(b) => Ok(Bool(b)),
         Expr::Var(s) => {
-            Ok(get_val_from_map(Var(s),map)?)
+            Ok(get_val_from_context(Var(s),context)?)
         },
         Expr::BinOp(left, op, right) => {
-            let l_val = eval_expr(*left, map)?;
-            let r_val = eval_expr(*right, map)?;
+            let l_val = eval_expr(*left, context)?;
+            let r_val = eval_expr(*right, context)?;
             Ok(eval_bin_expr(l_val, op, r_val)?)
         },
         Expr::Let(var, var_ty, expr) => { // not sure how to deal with type. ignore it for now
             let id = Var(String::from(*var));
-            let expr_val = eval_expr(*expr, map)?; 
-            map.insert(id, expr_val.clone());
+            let expr_val = eval_expr(*expr, context)?; 
+            
+            //map.insert(id, expr_val.clone());
+            insert_to_current_scope(id, expr_val.clone(), context);
             Ok(expr_val)
         },
         _ => panic!(),
@@ -79,21 +81,40 @@ pub fn eval_expr(e: Expr, map: &mut Scope) -> Result<Value, EvalErr> {
 }
 
 // Gets the value for a variable in the hashmap
-fn get_val_from_map(key: Value, map: &mut Scope) -> Result<Value,EvalErr> {
+fn get_val_from_scope(key: &Value, map: &Scope) -> Result<Value,EvalErr> {
     match map.get(&key) {
         Some(value) => Ok(value.clone()),
         None => Err(EvalErr::NotFound("Key not found in hashmap.".to_string())),
     }
 }
 
+fn get_val_from_context(key: Value, context: &mut Vec<Scope>) -> Result<Value, EvalErr> {
+    let mut val_res: Result<Value,EvalErr> = Err(EvalErr::NotFound("Error".to_string()));
+    for scope in context {
+        match get_val_from_scope(&key, &scope) {
+            Ok(value) => val_res = Ok(value),
+            Err(e) => val_res = Err(e),           
+        }
+    };
 
+    val_res
+
+}
+
+fn insert_to_current_scope(key: Value, val: Value, context: &mut Vec<Scope>) {
+    let scope = context.last_mut();
+    match scope {
+        Some(sc) => sc.insert(key,val),
+        None => panic!(),
+    };
+}
 
 pub fn test_eval(e: Expr) {
     let mut scope: Scope = HashMap::new();
-    //let mut context: Vec<Scope> = vec![];
+    let mut context: Vec<Scope> = vec![];
     scope.insert(Var("a".to_string()), Num(32 as i32));
-    //context.push(scope);
-    let val= eval_expr(e, &mut scope).unwrap();
-    println!("Val: {:#?}, HashMap: {:#?}", val, scope);
+    context.push(scope);
+    let val= eval_expr(e, &mut context).unwrap();
+    println!("Val: {:#?}, Context: {:#?}", val, context);
 }
 
