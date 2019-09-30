@@ -18,8 +18,8 @@ fn main() {
 
     //let a = "1 + 3 + 5 - (5*3);";
     //let a = "1 + 3 + 5 + true";
-    let a = "{let d: i32 = 1 + 2 + 5 / 5; let a: i32 = 3;}";
-    let tree = parse_block(a).unwrap().1;
+    let a = "let d: i32 = 1 + a + 5 / 5;";
+    let tree = parse_declaration(a).unwrap().1;
     println!("{:#?}",tree);
     let intr = test_eval(tree);
     //println!("{:#?}", intr);
