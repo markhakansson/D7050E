@@ -13,7 +13,7 @@ use nom::{
 };
 
 // Parses the name of any variable to the AST Var type.
-pub fn parse_var(input: &str) -> IResult<&str, Expr> {
+fn parse_var(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         map(alphanumeric1, |s: &str| Expr::Var(s.to_string())),
@@ -21,7 +21,7 @@ pub fn parse_var(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_type(input: &str) -> IResult<&str, Type> {
+fn parse_type(input: &str) -> IResult<&str, Type> {
     delimited(
         multispace0,
         alt((
@@ -34,7 +34,7 @@ pub fn parse_type(input: &str) -> IResult<&str, Type> {
 }
 
 // Parses declaration of a variable
-pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
+fn parse_declaration(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, type_lit, expr)): (&str, (Expr, Type, Expr)) = tuple((
         preceded(
             multispace0,
@@ -57,7 +57,7 @@ pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
 }
 
 // Parses any i32. Handles multiple negative signs.
-pub fn parse_i32(input: &str) -> IResult<&str, Expr> {
+fn parse_i32(input: &str) -> IResult<&str, Expr> {
     let (substring, sign) = fold_many0(
         delimited(multispace0, tag("-"), multispace0),
         1,
@@ -81,7 +81,7 @@ fn parse_parens_expr(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_bool(input: &str) -> IResult<&str, Expr> {
+fn parse_bool(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
@@ -92,7 +92,7 @@ pub fn parse_bool(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_bool_op(input: &str) -> IResult<&str, Op> {
+fn parse_bool_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
         alt((
@@ -104,7 +104,7 @@ pub fn parse_bool_op(input: &str) -> IResult<&str, Op> {
     )(input)
 }
 
-pub fn parse_rel_op(input: &str) -> IResult<&str, Op> {
+fn parse_rel_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
         alt((
@@ -306,6 +306,7 @@ pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Expr>> {
     )(input)
 }
 
+// TODO: this should be the only public function in the parser.
 // Main entry to parse a complete program
 pub fn parse_program(input: &str) -> IResult<&str, Vec<Expr>> {
     many0(delimited(multispace0, parse_keyword, multispace0))(input)
@@ -368,5 +369,28 @@ mod parse_tests {
             .is_ok(),
             true
         );
+    }
+
+    #[test]
+    fn test_parse_program() {
+        let program = "
+        fn test(b: bool) -> i32 {
+            let: a: i32 = 0;
+            if b {
+                a = 50;
+            };
+            return a;
+        }
+        
+        fn main() -> () {
+            let b: bool = true;
+            let i: i32 = 5;
+            let a: i32 = 0;
+            while (b) {
+                a += test(b);
+                b = false;
+            };
+        }";
+        assert_eq!(parse_program(program).is_ok(), true);
     }
 }

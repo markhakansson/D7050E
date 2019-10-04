@@ -71,7 +71,7 @@ impl ContextMethods for Context {
     }
     
     fn new_scope(&mut self) {
-        let mut scope: Scope = HashMap::new();
+        let scope: Scope = HashMap::new();
         self.push(scope);
     }
 
@@ -199,7 +199,7 @@ pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
         res = eval_expr(e, context);
     }
     // Should drop the scope after here
-    // drop_current_scope(context);
+    //context.drop_current_scope();
     res
 }
 
@@ -211,3 +211,8 @@ pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
 
 // Main entry
 //pub fn eval_program() {}
+
+#[cfg(test)]
+mod interpreter_tests {
+    use super::*;
+}
