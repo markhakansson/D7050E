@@ -203,16 +203,6 @@ pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
     res
 }
 
-pub fn test_eval(e: Expr) {
-    let mut scope: Scope = HashMap::new();
-    let mut context: Context = vec![];
-    scope.insert(Var("a".to_string()), Num(32 as i32));
-    context.push(scope);
-    let val = eval_expr(e, &mut context).unwrap();
-    println!("Val: {:#?}, Context: {:#?}", val, context);
-
-}
-
 // TODO
 /* pub fn eval_function(f: Function, args: Args, context: &mut FuncContext) {
     let mut fn_context: Context = vec![];
