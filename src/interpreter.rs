@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 pub type Scope = HashMap<Value, Value>; 
 pub type Context = Vec<Scope>; // Context is a stack of scopes
-pub type FuncContext = HashMap<String, Context>; // fn name, context
+pub type FnContext = Vec<Context>; // FnContext is a stack of scopes
 
 type EvalRes<T> = Result<T, EvalErr>;
 
@@ -25,6 +25,12 @@ pub trait ContextMethods {
     fn get_val(&mut self, key: &Value) -> EvalRes<Value>;
     fn insert_to_current_scope(&mut self, key: &Value, val: &Value);
     fn new_scope(&mut self);
+}
+
+pub trait FnContextMethods {
+    fn drop_current_context(&mut self);
+    fn get_last_context(&mut self) -> EvalRes<&mut Context>;
+    fn new_context(&mut self);
 }
 
 impl ContextMethods for Context {
@@ -77,6 +83,23 @@ impl ContextMethods for Context {
 
 }
 
+impl FnContextMethods for FnContext {
+    fn drop_current_context(&mut self) {
+        self.push(Context::new());
+    }
+
+    fn get_last_context(&mut self) -> EvalRes<&mut Context> {
+        match self.last_mut() {
+            Some(context) => Ok(context),
+            None => Err(EvalErr::NotFound("No context found in FnContext.".to_string()))
+        }
+    }
+
+    fn new_context(&mut self) {
+        self.pop();
+    }
+}
+
 fn eval_i32_expr(l: i32, op: Op, r: i32) -> EvalRes<Value> {
     match op {
         Op::MathOp(MathToken::Division) => Ok(Num(l / r)),
@@ -119,8 +142,31 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr, context: &mut Context) -> EvalRes<Val
 }
 
 // Evaluates a complete binomial tree to a single integer or bool.
+// Should take a FuncContext instead, to be able to call other functions.
 pub fn eval_expr(e: Expr, context: &mut Context) -> EvalRes<Value> {
     match e {
+        Expr::Num(num) => Ok(Num(num)),
+        Expr::Bool(b) => Ok(Bool(b)),
+        Expr::Var(s) => context.get_val(&Var(s)),
+        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, context),
+        Expr::VarOp(var, op, expr) => {
+            let key = Var(String::from(*var));
+            let expr_val = eval_expr(*expr, context)?;
+
+            match op {
+                Op::VarOp(VarToken::Assign) => context.update_var(&key, &expr_val),
+                _ => eval_var_op(&key, op, &expr_val, context),
+            }
+        },
+        Expr::Let(var, _, expr) => assign_var(*var, *expr, context), // ignore type for now
+        Expr::If(expr, block) => eval_if(*expr, block, context),
+        _ => Err(EvalErr::NotImplemented),
+    }
+}
+
+pub fn eval_expr_test(e: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let context = fn_context.get_last_context()?;
+     match e {
         Expr::Num(num) => Ok(Num(num)),
         Expr::Bool(b) => Ok(Bool(b)),
         Expr::Var(s) => context.get_val(&Var(s)),
@@ -204,13 +250,19 @@ pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
 }
 
 // TODO
-/* pub fn eval_function(f: Function, args: Args, context: &mut FuncContext) {
-    let mut fn_context: Context = vec![];
-    context.insert(f.name, fn_context);
-} */
+// Evaluates a function call in the program.
+// Args should be mapped to the same name as the parameters, then a scope with
+// said args should first be created. After that a block should be evaluated
+// as normal. 
+pub fn eval_fn_call(fn_name: String, args: Args, fn_context: &mut FnContext) { // -> EvalRes<Value> {
+    let mut context = Context::new(); 
+}
 
 // Main entry
-//pub fn eval_program() {}
+// Should evaluate the program starting from "main"
+pub fn eval_program(expr_vec: Vec<Expr>) {
+    let fn_context = FnContext::new();
+}
 
 #[cfg(test)]
 mod interpreter_tests {
