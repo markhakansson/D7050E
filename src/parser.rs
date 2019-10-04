@@ -27,6 +27,7 @@ pub fn parse_type(input: &str) -> IResult<&str, Type> {
         alt((
             map(tag("i32"), |_| Type::Int32),
             map(tag("bool"), |_| Type::Bool),
+            map(tag("()"), |_| Type::Void),
         )),
         multispace0,
     )(input)
@@ -165,7 +166,7 @@ pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     ))(input)
 }
 
-fn parse_single_arg(input: &str) -> IResult<&str, Param> {
+fn parse_single_param(input: &str) -> IResult<&str, Param> {
     let (substring, (id, id_type)) = tuple((terminated(parse_var, tag(":")), parse_type))(input)?;
 
     let param = Param::new(id.into(), id_type);
@@ -173,14 +174,14 @@ fn parse_single_arg(input: &str) -> IResult<&str, Param> {
     Ok((substring, param))
 }
 
-pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Param>> {
+pub fn parse_fn_params(input: &str) -> IResult<&str, Vec<Param>> {
     delimited(
         multispace0,
         delimited(
             tag("("),
             many0(alt((
-                parse_single_arg,
-                preceded(tag(","), parse_single_arg),
+                parse_single_param,
+                preceded(tag(","), parse_single_param),
             ))),
             tag(")"),
         ),
@@ -210,7 +211,7 @@ pub fn parse_return(input: &str) -> IResult<&str, Expr> {
 pub fn parse_function(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, params, return_type, block)) = tuple((
         delimited(multispace0, preceded(tag("fn"), parse_var), multispace0),
-        parse_fn_args,
+        parse_fn_params,
         delimited(multispace0, preceded(tag("->"), parse_type), multispace0),
         parse_block,
     ))(input)?;
@@ -268,7 +269,46 @@ pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
 
 // Parses right-hand expressions
 pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
-    delimited(multispace0, parse_bin_expr, multispace0)(input)
+    delimited(
+        multispace0,
+        alt((parse_func_call, parse_bin_expr)),
+        multispace0,
+    )(input)
+}
+
+pub fn parse_func_call(input: &str) -> IResult<&str, Expr> {
+    let (substring, (fn_name, args)) = tuple((parse_var, parse_fn_args))(input)?;
+
+    Ok((
+        substring,
+        Expr::FuncCall(FunctionCall::new(fn_name.into(), args)),
+    ))
+}
+
+fn parse_single_arg(input: &str) -> IResult<&str, Expr> {
+    let (substring, val) = terminated(parse_right_expr, multispace0)(input)?;
+
+    Ok((substring, val))
+}
+
+pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Expr>> {
+    delimited(
+        multispace0,
+        delimited(
+            tag("("),
+            many0(alt((
+                parse_single_arg,
+                preceded(tag(","), parse_single_arg),
+            ))),
+            tag(")"),
+        ),
+        multispace0,
+    )(input)
+}
+
+// Main entry to parse a complete program
+pub fn parse_program(input: &str) -> IResult<&str, Vec<Expr>> {
+    many0(delimited(multispace0, parse_keyword, multispace0))(input)
 }
 
 #[cfg(test)]
@@ -329,5 +369,4 @@ mod parse_tests {
             true
         );
     }
-
 }

@@ -1,6 +1,10 @@
 #[derive(PartialEq, Debug, Eq)]
 pub struct Identifier(String);
 
+pub type Block = Vec<Expr>;
+pub type Args = Block;
+pub type Params = Vec<Param>;
+
 impl Identifier {
     pub fn new(name: &str) -> Identifier {
         Identifier(name.to_string())
@@ -75,20 +79,32 @@ impl Param {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Function {
-    name: String,
-    params: Vec<Param>,
-    block: Vec<Expr>,
-    return_type: Type,
+    pub name: String,
+    pub params: Params,
+    pub block: Block,
+    pub return_type: Type,
 }
 
 impl Function {
-    pub fn new(name: String, params: Vec<Param>, block: Vec<Expr>, return_type: Type) -> Function {
+    pub fn new(name: String, params: Params, block: Block, return_type: Type) -> Self {
         Function {
             name,
             params,
             block,
             return_type,
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct FunctionCall {
+    name: String,
+    args: Args,
+}
+
+impl FunctionCall {
+    pub fn new(name: String, args: Args) -> Self {
+        FunctionCall { name, args }
     }
 }
 
@@ -103,25 +119,25 @@ pub enum Value {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Keyword {
-    Let(Box<Expr>, Type, Box<Expr>),
-    If(Box<Expr>, Vec<Expr>),
-    IfElse(Box<Expr>, Vec<Expr>),
-    While(Box<Expr>, Vec<Expr>),
+    Let(Box<Node>, Type, Box<Node>),
+    If(Box<Node>, Block),
+    IfElse(Box<Node>, Block),
+    While(Box<Node>, Block),
     Func(Function),
-    Return(Box<Expr>),
+    Return(Box<Node>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum NewExpr {
+pub enum _Expr {
     BinOp(Box<Node>, Op, Box<Node>),
-    VarOp(Box<Expr>, Op, Box<Expr>),
+    VarOp(Box<Node>, Op, Box<Node>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Node {
     Value(Value),
     Keyword(Keyword),
-    Expr(NewExpr),
+    Expr(_Expr),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -135,10 +151,11 @@ pub enum Expr {
     // Keywords (coud be moved to another enum?)
     Let(Box<Expr>, Type, Box<Expr>),
     VarOp(Box<Expr>, Op, Box<Expr>),
-    If(Box<Expr>, Vec<Expr>),
-    IfElse(Box<Expr>, Vec<Expr>),
-    While(Box<Expr>, Vec<Expr>),
+    If(Box<Expr>, Block),
+    IfElse(Box<Expr>, Block),
+    While(Box<Expr>, Block),
     Func(Function),
+    FuncCall(FunctionCall),
     Return(Box<Expr>),
 }
 

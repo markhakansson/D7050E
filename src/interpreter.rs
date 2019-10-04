@@ -1,16 +1,83 @@
-use crate::ast::{*,Value::{Num,Bool,Var}};
+use crate::ast::{
+    Value::{Bool, Num, Var},
+    *,
+};
 use std::collections::HashMap;
 
-type Scope = HashMap<Value, Value>;
+pub type Scope = HashMap<Value, Value>; 
+pub type Context = Vec<Scope>; // Context is a stack of scopes
+pub type FuncContext = HashMap<String, Context>; // fn name, context
+
+type EvalRes<T> = Result<T, EvalErr>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum EvalErr {
-    WrongOp(String),
-    TypeMismatch(String),
     NotFound(String),
+    NotImplemented,
+    TypeMismatch(String),
+    WrongOp(String),
+    WrongType(String),
 }
 
-fn eval_i32_expr(l: i32, op: Op, r: i32) -> Result<Value, EvalErr> {
+pub trait ContextMethods {
+    fn update_var(&mut self, key: &Value, val: &Value) -> EvalRes<Value>;
+    fn drop_current_scope(&mut self);
+    fn get_val(&mut self, key: &Value) -> EvalRes<Value>;
+    fn insert_to_current_scope(&mut self, key: &Value, val: &Value);
+    fn new_scope(&mut self);
+}
+
+impl ContextMethods for Context {
+    fn update_var(&mut self, key: &Value, val: &Value) -> EvalRes<Value> {
+        for scope in self.iter_mut().rev() {
+            match scope.get(&key) {
+                Some(_) => {
+                    scope.insert(key.clone(), val.clone());
+                    return Ok(val.clone())
+                }
+                None => continue,
+            }
+        }
+
+        Err(EvalErr::NotFound("Value not found in context.".to_string()))
+    }
+
+    fn drop_current_scope(&mut self) {
+        self.pop();
+    }
+
+    fn get_val(&mut self, key: &Value) -> EvalRes<Value> {
+        let mut val_res: EvalRes<Value> = Err(EvalErr::NotFound("Key not found in context scopes".to_string()));
+
+        for scope in self.iter().rev() {
+            match scope.get(&key) {
+                Some(value) => {
+                    val_res = Ok(value.clone()); 
+                    break;
+                },
+                None => continue,
+            };
+        }
+
+        val_res
+    }
+
+    fn insert_to_current_scope(&mut self, key: &Value, val: &Value) {
+        let scope_opt = self.last_mut();
+        match scope_opt {
+            Some(scope) => scope.insert(key.clone(), val.clone()),
+            None => panic!("There are no scopes in the context."),
+        };
+    }
+    
+    fn new_scope(&mut self) {
+        let mut scope: Scope = HashMap::new();
+        self.push(scope);
+    }
+
+}
+
+fn eval_i32_expr(l: i32, op: Op, r: i32) -> EvalRes<Value> {
     match op {
         Op::MathOp(MathToken::Division) => Ok(Num(l / r)),
         Op::MathOp(MathToken::Multiply) => Ok(Num(l * r)),
@@ -25,7 +92,7 @@ fn eval_i32_expr(l: i32, op: Op, r: i32) -> Result<Value, EvalErr> {
     }
 }
 
-fn eval_bool_expr(l: bool, op: Op, r: bool) -> Result<Value, EvalErr> {
+fn eval_bool_expr(l: bool, op: Op, r: bool) -> EvalRes<Value> {
     match op {
         Op::BoolOp(BoolToken::And) => Ok(Bool(l && r)),
         Op::BoolOp(BoolToken::Or) => Ok(Bool(l || r)),
@@ -38,83 +105,119 @@ fn eval_bool_expr(l: bool, op: Op, r: bool) -> Result<Value, EvalErr> {
 }
 
 // Evaluates whether an expression is an i32 or bool operation.
-fn eval_bin_expr(l: Value, op: Op, r: Value) -> Result<Value, EvalErr> {
-    match (&l, &r) {
-        (Value::Num(l), Value::Num(r)) => eval_i32_expr(*l, op, *r),
-        (Value::Bool(l), Value::Bool(r)) => eval_bool_expr(*l, op, *r),
+fn eval_bin_expr(l: Expr, op: Op, r: Expr, context: &mut Context) -> EvalRes<Value> {
+    let l_val = eval_expr(l, context)?;
+    let r_val = eval_expr(r, context)?;
+
+    match (l_val, r_val) {
+        (Num(l_val), Num(r_val)) => eval_i32_expr(l_val, op, r_val),
+        (Bool(l_val), Bool(r_val)) => eval_bool_expr(l_val, op, r_val),
         _ => Err(EvalErr::TypeMismatch(String::from(
             "Can not evaluate an operation between a bool and an i32.",
         ))),
     }
 }
 
-/* pub fn eval_assign_var(var: Expr, var_ty: Type, expr: Expr, map: &mut Scope) -> Result<(Value, &Scope), EvalErr> {
-    let mut id = Var(String::from(var));
-    let (expr_val,_) = eval_tree(expr, map)?; 
-    map.insert(id, expr_val.clone());
-    Ok( (expr_val, map) ) 
-} */
-
 // Evaluates a complete binomial tree to a single integer or bool.
-pub fn eval_expr(e: Expr, context: &mut Vec<Scope>) -> Result<Value, EvalErr> {
+pub fn eval_expr(e: Expr, context: &mut Context) -> EvalRes<Value> {
     match e {
         Expr::Num(num) => Ok(Num(num)),
         Expr::Bool(b) => Ok(Bool(b)),
-        Expr::Var(s) => {
-            Ok(get_val_from_context(Var(s),context)?)
+        Expr::Var(s) => context.get_val(&Var(s)),
+        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, context),
+        Expr::VarOp(var, op, expr) => {
+            let key = Var(String::from(*var));
+            let expr_val = eval_expr(*expr, context)?;
+
+            match op {
+                Op::VarOp(VarToken::Assign) => context.update_var(&key, &expr_val),
+                _ => eval_var_op(&key, op, &expr_val, context),
+            }
         },
-        Expr::BinOp(left, op, right) => {
-            let l_val = eval_expr(*left, context)?;
-            let r_val = eval_expr(*right, context)?;
-            Ok(eval_bin_expr(l_val, op, r_val)?)
-        },
-        Expr::Let(var, var_ty, expr) => { // not sure how to deal with type. ignore it for now
-            let id = Var(String::from(*var));
-            let expr_val = eval_expr(*expr, context)?; 
-            
-            //map.insert(id, expr_val.clone());
-            insert_to_current_scope(id, expr_val.clone(), context);
-            Ok(expr_val)
-        },
-        _ => panic!(),
+        Expr::Let(var, _, expr) => assign_var(*var, *expr, context), // ignore type for now
+        Expr::If(expr, block) => eval_if(*expr, block, context),
+        _ => Err(EvalErr::NotImplemented),
     }
 }
 
-// Gets the value for a variable in the hashmap
-fn get_val_from_scope(key: &Value, map: &Scope) -> Result<Value,EvalErr> {
-    match map.get(&key) {
-        Some(value) => Ok(value.clone()),
-        None => Err(EvalErr::NotFound("Key not found in hashmap.".to_string())),
+// Assigns value to variable. Store it in current scope.
+fn assign_var(var: Expr, expr: Expr, context: &mut Context) -> EvalRes<Value> {
+    let id = Var(String::from(var));
+    let expr_val = eval_expr(expr, context)?;
+    context.insert_to_current_scope(&id, &expr_val);
+    Ok(expr_val)
+}
+
+// Evaluates variable operations such as ´a += b´ etc.
+fn eval_var_op(key: &Value, op: Op, new_val: &Value, context: &mut Context) -> EvalRes<Value> {
+    let old_val: i32 = i32::from(context.get_val(key)?);
+    let expr_val: i32 = i32::from(new_val.clone());
+
+    match op {
+        Op::VarOp(VarToken::PlusEq) => {
+            let new_val = Num(old_val + expr_val);
+            context.update_var(key, &new_val)
+        },
+        Op::VarOp(VarToken::MinEq) => {
+            let new_val = Num(old_val - expr_val);
+            context.update_var(key, &new_val)
+        },
+        Op::VarOp(VarToken::MulEq) => {
+            let new_val = Num(old_val * expr_val);
+            context.update_var(key, &new_val)
+        },
+        _ => Err(EvalErr::WrongOp("Not a variable operator.".to_string()))
     }
 }
 
-fn get_val_from_context(key: Value, context: &mut Vec<Scope>) -> Result<Value, EvalErr> {
-    let mut val_res: Result<Value,EvalErr> = Err(EvalErr::NotFound("Error".to_string()));
-    for scope in context {
-        match get_val_from_scope(&key, &scope) {
-            Ok(value) => val_res = Ok(value),
-            Err(e) => val_res = Err(e),           
+fn eval_if(e: Expr, block: Block, context: &mut Context) -> EvalRes<Value> {
+    let condition = eval_expr(e, context)?;
+    let res: EvalRes<Value>;
+
+    match condition {
+        Bool(true) => {
+            res = eval_block(block, context);
         }
-    };
+        Bool(false) => res = Ok(Bool(false)),
+        _ => {
+            res = Err(EvalErr::WrongType(
+                "Cannot evaluate condition. Not a boolean expression.".to_string(),
+            ))
+        }
+    }
 
-    val_res
-
+    res
 }
 
-fn insert_to_current_scope(key: Value, val: Value, context: &mut Vec<Scope>) {
-    let scope = context.last_mut();
-    match scope {
-        Some(sc) => sc.insert(key,val),
-        None => panic!(),
-    };
+// Evaluates a complete block. Returns the value from the last instruction evaluated.
+pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
+    context.new_scope();
+    let mut res: EvalRes<Value> =
+        Err(EvalErr::NotFound("No expressions found.".to_string()));
+
+    for e in block {
+        res = eval_expr(e, context);
+    }
+    // Should drop the scope after here
+    // drop_current_scope(context);
+    res
 }
 
 pub fn test_eval(e: Expr) {
     let mut scope: Scope = HashMap::new();
-    let mut context: Vec<Scope> = vec![];
+    let mut context: Context = vec![];
     scope.insert(Var("a".to_string()), Num(32 as i32));
     context.push(scope);
-    let val= eval_expr(e, &mut context).unwrap();
+    let val = eval_expr(e, &mut context).unwrap();
     println!("Val: {:#?}, Context: {:#?}", val, context);
+
 }
 
+// TODO
+/* pub fn eval_function(f: Function, args: Args, context: &mut FuncContext) {
+    let mut fn_context: Context = vec![];
+    context.insert(f.name, fn_context);
+} */
+
+// Main entry
+//pub fn eval_program() {}
