@@ -108,7 +108,7 @@ impl FunctionCall {
     }
 }
 
-// Value, Keyword, NewExpr (rename to Expr), Node (same functionality
+// Value, Keyword, _Expr (rename to Expr), Node (same functionality
 // as the old Expr) should be used instead of only Expr
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub enum Value {

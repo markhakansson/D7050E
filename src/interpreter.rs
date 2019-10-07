@@ -4,9 +4,10 @@ use crate::ast::{
 };
 use std::collections::HashMap;
 
-pub type Scope = HashMap<Value, Value>; 
+pub type Scope = HashMap<String, Value>;
 pub type Context = Vec<Scope>; // Context is a stack of scopes
 pub type FnContext = Vec<Context>; // FnContext is a stack of scopes
+pub type Functions = Vec<Expr>;
 
 type EvalRes<T> = Result<T, EvalErr>;
 
@@ -20,10 +21,10 @@ pub enum EvalErr {
 }
 
 pub trait ContextMethods {
-    fn update_var(&mut self, key: &Value, val: &Value) -> EvalRes<Value>;
+    fn update_var(&mut self, key: &str, val: &Value) -> EvalRes<Value>;
     fn drop_current_scope(&mut self);
-    fn get_val(&mut self, key: &Value) -> EvalRes<Value>;
-    fn insert_to_current_scope(&mut self, key: &Value, val: &Value);
+    fn get_val(&mut self, key: &str) -> EvalRes<Value>;
+    fn insert_to_current_scope(&mut self, key: &str, val: &Value);
     fn new_scope(&mut self);
 }
 
@@ -34,11 +35,11 @@ pub trait FnContextMethods {
 }
 
 impl ContextMethods for Context {
-    fn update_var(&mut self, key: &Value, val: &Value) -> EvalRes<Value> {
+    fn update_var(&mut self, key: &str, val: &Value) -> EvalRes<Value> {
         for scope in self.iter_mut().rev() {
-            match scope.get(&key) {
+            match scope.get(key) {
                 Some(_) => {
-                    scope.insert(key.clone(), val.clone());
+                    scope.insert(key.to_string(), val.clone());
                     return Ok(val.clone())
                 }
                 None => continue,
@@ -52,11 +53,11 @@ impl ContextMethods for Context {
         self.pop();
     }
 
-    fn get_val(&mut self, key: &Value) -> EvalRes<Value> {
+    fn get_val(&mut self, key: &str) -> EvalRes<Value> {
         let mut val_res: EvalRes<Value> = Err(EvalErr::NotFound("Key not found in context scopes".to_string()));
 
         for scope in self.iter().rev() {
-            match scope.get(&key) {
+            match scope.get(key) {
                 Some(value) => {
                     val_res = Ok(value.clone()); 
                     break;
@@ -68,10 +69,10 @@ impl ContextMethods for Context {
         val_res
     }
 
-    fn insert_to_current_scope(&mut self, key: &Value, val: &Value) {
+    fn insert_to_current_scope(&mut self, key: &str, val: &Value) {
         let scope_opt = self.last_mut();
         match scope_opt {
-            Some(scope) => scope.insert(key.clone(), val.clone()),
+            Some(scope) => scope.insert(key.to_string(), val.clone()),
             None => panic!("There are no scopes in the context."),
         };
     }
@@ -128,9 +129,9 @@ fn eval_bool_expr(l: bool, op: Op, r: bool) -> EvalRes<Value> {
 }
 
 // Evaluates whether an expression is an i32 or bool operation.
-fn eval_bin_expr(l: Expr, op: Op, r: Expr, context: &mut Context) -> EvalRes<Value> {
-    let l_val = eval_expr(l, context)?;
-    let r_val = eval_expr(r, context)?;
+fn eval_bin_expr(l: Expr, op: Op, r: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let l_val = eval_expr(l, fn_context)?;
+    let r_val = eval_expr(r, fn_context)?;
 
     match (l_val, r_val) {
         (Num(l_val), Num(r_val)) => eval_i32_expr(l_val, op, r_val),
@@ -142,87 +143,66 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr, context: &mut Context) -> EvalRes<Val
 }
 
 // Evaluates a complete binomial tree to a single integer or bool.
-// Should take a FuncContext instead, to be able to call other functions.
-pub fn eval_expr(e: Expr, context: &mut Context) -> EvalRes<Value> {
-    match e {
-        Expr::Num(num) => Ok(Num(num)),
-        Expr::Bool(b) => Ok(Bool(b)),
-        Expr::Var(s) => context.get_val(&Var(s)),
-        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, context),
-        Expr::VarOp(var, op, expr) => {
-            let key = Var(String::from(*var));
-            let expr_val = eval_expr(*expr, context)?;
-
-            match op {
-                Op::VarOp(VarToken::Assign) => context.update_var(&key, &expr_val),
-                _ => eval_var_op(&key, op, &expr_val, context),
-            }
-        },
-        Expr::Let(var, _, expr) => assign_var(*var, *expr, context), // ignore type for now
-        Expr::If(expr, block) => eval_if(*expr, block, context),
-        _ => Err(EvalErr::NotImplemented),
-    }
-}
-
-pub fn eval_expr_test(e: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {
-    let context = fn_context.get_last_context()?;
+pub fn eval_expr(e: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {
+    //let context = fn_context.get_last_context()?;
      match e {
         Expr::Num(num) => Ok(Num(num)),
         Expr::Bool(b) => Ok(Bool(b)),
-        Expr::Var(s) => context.get_val(&Var(s)),
-        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, context),
+        Expr::Var(s) => fn_context.get_last_context()?.get_val(&s),
+        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, fn_context),
         Expr::VarOp(var, op, expr) => {
-            let key = Var(String::from(*var));
-            let expr_val = eval_expr(*expr, context)?;
+            let key = String::from(*var);
+            let expr_val = eval_expr(*expr, fn_context)?;
 
             match op {
-                Op::VarOp(VarToken::Assign) => context.update_var(&key, &expr_val),
-                _ => eval_var_op(&key, op, &expr_val, context),
+                Op::VarOp(VarToken::Assign) => fn_context.get_last_context()?.update_var(&key, &expr_val),
+                _ => eval_var_op(&key, op, &expr_val, fn_context.get_last_context()?),
             }
         },
-        Expr::Let(var, _, expr) => assign_var(*var, *expr, context), // ignore type for now
-        Expr::If(expr, block) => eval_if(*expr, block, context),
+        Expr::Let(var, _, expr) => assign_var(*var, *expr, fn_context), // ignore type for now
+        Expr::If(expr, block) => eval_if(*expr, block, fn_context),
+        //Expr::FuncCall(fn_call) => eval_fn_call(fn_call, fn_context),
         _ => Err(EvalErr::NotImplemented),
     }
 }
 
 // Assigns value to variable. Store it in current scope.
-fn assign_var(var: Expr, expr: Expr, context: &mut Context) -> EvalRes<Value> {
-    let id = Var(String::from(var));
-    let expr_val = eval_expr(expr, context)?;
-    context.insert_to_current_scope(&id, &expr_val);
+fn assign_var(var: Expr, expr: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {   
+    let id = String::from(var);
+    let expr_val = eval_expr(expr, fn_context)?;
+    fn_context.get_last_context()?.insert_to_current_scope(&id, &expr_val);
     Ok(expr_val)
 }
 
 // Evaluates variable operations such as ´a += b´ etc.
-fn eval_var_op(key: &Value, op: Op, new_val: &Value, context: &mut Context) -> EvalRes<Value> {
-    let old_val: i32 = i32::from(context.get_val(key)?);
+fn eval_var_op(key: &str, op: Op, new_val: &Value, context: &mut Context) -> EvalRes<Value> {
+    let old_val: i32 = i32::from(context.get_val(&key)?);
     let expr_val: i32 = i32::from(new_val.clone());
 
     match op {
         Op::VarOp(VarToken::PlusEq) => {
             let new_val = Num(old_val + expr_val);
-            context.update_var(key, &new_val)
+            context.update_var(&key, &new_val)
         },
         Op::VarOp(VarToken::MinEq) => {
             let new_val = Num(old_val - expr_val);
-            context.update_var(key, &new_val)
+            context.update_var(&key, &new_val)
         },
         Op::VarOp(VarToken::MulEq) => {
             let new_val = Num(old_val * expr_val);
-            context.update_var(key, &new_val)
+            context.update_var(&key, &new_val)
         },
         _ => Err(EvalErr::WrongOp("Not a variable operator.".to_string()))
     }
 }
 
-fn eval_if(e: Expr, block: Block, context: &mut Context) -> EvalRes<Value> {
-    let condition = eval_expr(e, context)?;
+fn eval_if(e: Expr, block: Block, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let condition = eval_expr(e, fn_context)?;
     let res: EvalRes<Value>;
 
     match condition {
         Bool(true) => {
-            res = eval_block(block, context);
+            res = eval_block(block, fn_context);
         }
         Bool(false) => res = Ok(Bool(false)),
         _ => {
@@ -236,13 +216,14 @@ fn eval_if(e: Expr, block: Block, context: &mut Context) -> EvalRes<Value> {
 }
 
 // Evaluates a complete block. Returns the value from the last instruction evaluated.
-pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
+pub fn eval_block(block: Block, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let context = fn_context.get_last_context()?;
     context.new_scope();
     let mut res: EvalRes<Value> =
         Err(EvalErr::NotFound("No expressions found.".to_string()));
 
     for e in block {
-        res = eval_expr(e, context);
+        res = eval_expr(e, fn_context);
     }
     // Should drop the scope after here
     //context.drop_current_scope();
@@ -254,13 +235,16 @@ pub fn eval_block(block: Block, context: &mut Context) -> EvalRes<Value> {
 // Args should be mapped to the same name as the parameters, then a scope with
 // said args should first be created. After that a block should be evaluated
 // as normal. 
-pub fn eval_fn_call(fn_name: String, args: Args, fn_context: &mut FnContext) { // -> EvalRes<Value> {
-    let mut context = Context::new(); 
+pub fn eval_fn_call(fn_call: FunctionCall, fn_context: &mut FnContext) { // -> EvalRes<Value> {
+
 }
+
+// pub fn eval_while() {}
+// pub fn eval_return() {}
 
 // Main entry
 // Should evaluate the program starting from "main"
-pub fn eval_program(expr_vec: Vec<Expr>) {
+pub fn eval_program(fn_list: Functions) {
     let fn_context = FnContext::new();
 }
 

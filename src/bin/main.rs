@@ -24,7 +24,7 @@ fn main() {
     }
     ";
     let tree = parse_program(function).unwrap().1;
-    println!("{:#?}", tree); 
+    println!("{:#?}", tree);  
 
     // Function declaration 2
 /*     let function = "
@@ -64,7 +64,7 @@ fn main() {
     let intr = eval_block(tree, &mut context);
     println!("{:#?}", context); */
 
- /*    let if_st = "{
+/*     let if_st = "{
         let a: bool = true;
         let b: i32 = 5;
         if a {
@@ -81,9 +81,9 @@ fn main() {
     }";
     let if_tree = parse_block(if_st).unwrap().1;
     println!("{:#?}", if_tree);
-    let mut context = Context::new();
-    let intr = eval_block(if_tree, &mut context);
-    println!("{:#?}", context);  */
+    let mut fn_context = FnContext::new();
+    let intr = eval_block(if_tree, &mut fn_context);
+    println!("{:#?}", fn_context); */
 
 
 }

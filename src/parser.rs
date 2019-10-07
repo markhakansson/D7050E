@@ -117,7 +117,7 @@ fn parse_rel_op(input: &str) -> IResult<&str, Op> {
     )(input)
 }
 
-pub fn parse_math_op(input: &str) -> IResult<&str, Op> {
+fn parse_math_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
         alt((
@@ -131,7 +131,7 @@ pub fn parse_math_op(input: &str) -> IResult<&str, Op> {
     )(input)
 }
 
-pub fn parse_var_op(input: &str) -> IResult<&str, Op> {
+fn parse_var_op(input: &str) -> IResult<&str, Op> {
     delimited(
         multispace0,
         alt((
@@ -144,12 +144,12 @@ pub fn parse_var_op(input: &str) -> IResult<&str, Op> {
     )(input)
 }
 
-pub fn parse_any_op(input: &str) -> IResult<&str, Op> {
+fn parse_any_op(input: &str) -> IResult<&str, Op> {
     alt((parse_bool_op, parse_math_op, parse_rel_op))(input)
 }
 
 // Parses arithmetic and logical binomial expressions.
-pub fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
@@ -174,7 +174,7 @@ fn parse_single_param(input: &str) -> IResult<&str, Param> {
     Ok((substring, param))
 }
 
-pub fn parse_fn_params(input: &str) -> IResult<&str, Vec<Param>> {
+fn parse_fn_params(input: &str) -> IResult<&str, Vec<Param>> {
     delimited(
         multispace0,
         delimited(
@@ -202,13 +202,13 @@ pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
 }
 
 // Parses return-statements
-pub fn parse_return(input: &str) -> IResult<&str, Expr> {
+fn parse_return(input: &str) -> IResult<&str, Expr> {
     let (substring, ret) = preceded(tag("return"), parse_right_expr)(input)?;
 
     Ok((substring, Expr::Return(Box::new(ret))))
 }
 
-pub fn parse_function(input: &str) -> IResult<&str, Expr> {
+fn parse_function(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, params, return_type, block)) = tuple((
         delimited(multispace0, preceded(tag("fn"), parse_var), multispace0),
         parse_fn_params,
@@ -221,7 +221,7 @@ pub fn parse_function(input: &str) -> IResult<&str, Expr> {
 }
 
 // Parses lonely if statements
-pub fn parse_if(input: &str) -> IResult<&str, Expr> {
+fn parse_if(input: &str) -> IResult<&str, Expr> {
     let (substring, (_, exp, block)) = tuple((
         delimited(multispace0, tag("if"), multispace0),
         alt((parse_bin_expr, parse_var_expr)),
@@ -233,7 +233,7 @@ pub fn parse_if(input: &str) -> IResult<&str, Expr> {
 
 //fn parse_else(input: &str) -> IResult<&str,Expr> {}
 
-pub fn parse_while(input: &str) -> IResult<&str, Expr> {
+fn parse_while(input: &str) -> IResult<&str, Expr> {
     let (substring, (_, expr, block)) = tuple((
         delimited(multispace0, tag("while"), multispace0),
         parse_right_expr,
@@ -245,14 +245,14 @@ pub fn parse_while(input: &str) -> IResult<&str, Expr> {
 
 // Parses variable assignments where the variable has already
 // been declared. E.g. 'a = 3;'.
-pub fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_var_expr(input: &str) -> IResult<&str, Expr> {
     let (substring, (var, op, expr)) = tuple((parse_var, parse_var_op, parse_right_expr))(input)?;
 
     Ok((substring, Expr::VarOp(Box::new(var), op, Box::new(expr))))
 }
 
 // Parses keywords such as 'let', 'fn', 'if' etc.
-pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
+fn parse_keyword(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((
@@ -268,7 +268,7 @@ pub fn parse_keyword(input: &str) -> IResult<&str, Expr> {
 }
 
 // Parses right-hand expressions
-pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
+fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
         alt((parse_func_call, parse_bin_expr)),
@@ -276,7 +276,7 @@ pub fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
     )(input)
 }
 
-pub fn parse_func_call(input: &str) -> IResult<&str, Expr> {
+fn parse_func_call(input: &str) -> IResult<&str, Expr> {
     let (substring, (fn_name, args)) = tuple((parse_var, parse_fn_args))(input)?;
 
     Ok((
@@ -291,7 +291,7 @@ fn parse_single_arg(input: &str) -> IResult<&str, Expr> {
     Ok((substring, val))
 }
 
-pub fn parse_fn_args(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_fn_args(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         multispace0,
         delimited(
