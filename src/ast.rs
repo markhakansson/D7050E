@@ -1,17 +1,19 @@
-#[derive(PartialEq, Debug, Eq)]
-pub struct Identifier(String);
-
-pub type Block = Vec<Expr>;
 pub type Args = Block;
 pub type Params = Vec<Param>;
+pub type Functions = Vec<Function>;
 
-impl Identifier {
-    pub fn new(name: &str) -> Identifier {
-        Identifier(name.to_string())
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Block{
+    pub content: Vec<Expr>
+}
+
+impl Block {
+    pub fn new(exprs: Vec<Expr>) -> Block {
+        Block{content: exprs}
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MathToken {
     Minus,
     Plus,
@@ -21,14 +23,14 @@ pub enum MathToken {
 }
 
 // Need to handle Not
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BoolToken {
     And,
     Or,
     Not, // implementation neeeded
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RelToken {
     Leq,
     Geq,
@@ -36,7 +38,7 @@ pub enum RelToken {
     Neq,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VarToken {
     Assign,
     PlusEq,
@@ -44,7 +46,7 @@ pub enum VarToken {
     MulEq,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Op {
     MathOp(MathToken),
     BoolOp(BoolToken),
@@ -58,17 +60,17 @@ pub enum BoolState {
     False,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Int32,
     Bool,
     Void, // for functions
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Param {
-    name: String,
-    param_type: Type,
+    pub name: String,
+    pub param_type: Type,
 }
 
 impl Param {
@@ -77,7 +79,7 @@ impl Param {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function {
     pub name: String,
     pub params: Params,
@@ -96,10 +98,10 @@ impl Function {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionCall {
-    name: String,
-    args: Args,
+    pub name: String,
+    pub args: Args,
 }
 
 impl FunctionCall {
@@ -140,7 +142,7 @@ pub enum Node {
     Expr(_Expr),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     // Right-hand expressions
     BinOp(Box<Expr>, Op, Box<Expr>),

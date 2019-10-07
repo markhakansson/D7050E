@@ -7,7 +7,6 @@ use std::collections::HashMap;
 pub type Scope = HashMap<String, Value>;
 pub type Context = Vec<Scope>; // Context is a stack of scopes
 pub type FnContext = Vec<Context>; // FnContext is a stack of scopes
-pub type Functions = Vec<Expr>;
 
 type EvalRes<T> = Result<T, EvalErr>;
 
@@ -31,7 +30,22 @@ pub trait ContextMethods {
 pub trait FnContextMethods {
     fn drop_current_context(&mut self);
     fn get_last_context(&mut self) -> EvalRes<&mut Context>;
-    fn new_context(&mut self);
+    fn new_context(&mut self) -> EvalRes<&mut Context>;
+}
+
+pub trait FunctionsMethods {
+    fn get_fn(&mut self, name: String) -> EvalRes<Function>;
+}
+
+impl FunctionsMethods for Functions {
+    fn get_fn(&mut self, name: String) -> EvalRes<Function> {
+        for func in self.iter() {
+            if func.name == name {
+                return Ok(func.clone())
+            }
+        }
+        Err(EvalErr::NotFound("Function not found in tree.".to_string() ))
+    }
 }
 
 impl ContextMethods for Context {
@@ -86,7 +100,7 @@ impl ContextMethods for Context {
 
 impl FnContextMethods for FnContext {
     fn drop_current_context(&mut self) {
-        self.push(Context::new());
+        self.pop();
     }
 
     fn get_last_context(&mut self) -> EvalRes<&mut Context> {
@@ -96,8 +110,9 @@ impl FnContextMethods for FnContext {
         }
     }
 
-    fn new_context(&mut self) {
-        self.pop();
+    fn new_context(&mut self) -> EvalRes<&mut Context> {
+        self.push(Context::new());
+        self.get_last_context()
     }
 }
 
@@ -129,9 +144,9 @@ fn eval_bool_expr(l: bool, op: Op, r: bool) -> EvalRes<Value> {
 }
 
 // Evaluates whether an expression is an i32 or bool operation.
-fn eval_bin_expr(l: Expr, op: Op, r: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {
-    let l_val = eval_expr(l, fn_context)?;
-    let r_val = eval_expr(r, fn_context)?;
+fn eval_bin_expr(l: Expr, op: Op, r: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let l_val = eval_expr(l, fn_tree, fn_context)?;
+    let r_val = eval_expr(r, fn_tree, fn_context)?;
 
     match (l_val, r_val) {
         (Num(l_val), Num(r_val)) => eval_i32_expr(l_val, op, r_val),
@@ -143,33 +158,35 @@ fn eval_bin_expr(l: Expr, op: Op, r: Expr, fn_context: &mut FnContext) -> EvalRe
 }
 
 // Evaluates a complete binomial tree to a single integer or bool.
-pub fn eval_expr(e: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {
+// Should clone the expression before first calling the function. Except
+// in functions that eval_expr itself calls.
+pub fn eval_expr(e: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
     //let context = fn_context.get_last_context()?;
      match e {
         Expr::Num(num) => Ok(Num(num)),
         Expr::Bool(b) => Ok(Bool(b)),
         Expr::Var(s) => fn_context.get_last_context()?.get_val(&s),
-        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, fn_context),
+        Expr::BinOp(left, op, right) => eval_bin_expr(*left, op, *right, fn_tree, fn_context),
         Expr::VarOp(var, op, expr) => {
             let key = String::from(*var);
-            let expr_val = eval_expr(*expr, fn_context)?;
+            let expr_val = eval_expr(*expr, fn_tree, fn_context)?;
 
             match op {
                 Op::VarOp(VarToken::Assign) => fn_context.get_last_context()?.update_var(&key, &expr_val),
                 _ => eval_var_op(&key, op, &expr_val, fn_context.get_last_context()?),
             }
         },
-        Expr::Let(var, _, expr) => assign_var(*var, *expr, fn_context), // ignore type for now
-        Expr::If(expr, block) => eval_if(*expr, block, fn_context),
-        //Expr::FuncCall(fn_call) => eval_fn_call(fn_call, fn_context),
+        Expr::Let(var, _, expr) => assign_var(*var, *expr, fn_tree, fn_context), // ignore type for now
+        Expr::If(expr, block) => eval_if(*expr, block, fn_tree, fn_context),
+        Expr::FuncCall(fn_call) => eval_fn_call(fn_call, fn_tree, fn_context),
         _ => Err(EvalErr::NotImplemented),
     }
 }
 
 // Assigns value to variable. Store it in current scope.
-fn assign_var(var: Expr, expr: Expr, fn_context: &mut FnContext) -> EvalRes<Value> {   
+fn assign_var(var: Expr, expr: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {   
     let id = String::from(var);
-    let expr_val = eval_expr(expr, fn_context)?;
+    let expr_val = eval_expr(expr, fn_tree, fn_context)?;
     fn_context.get_last_context()?.insert_to_current_scope(&id, &expr_val);
     Ok(expr_val)
 }
@@ -196,13 +213,13 @@ fn eval_var_op(key: &str, op: Op, new_val: &Value, context: &mut Context) -> Eva
     }
 }
 
-fn eval_if(e: Expr, block: Block, fn_context: &mut FnContext) -> EvalRes<Value> {
-    let condition = eval_expr(e, fn_context)?;
+fn eval_if(e: Expr, block: Block, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let condition = eval_expr(e, fn_tree, fn_context)?;
     let res: EvalRes<Value>;
 
     match condition {
         Bool(true) => {
-            res = eval_block(block, fn_context);
+            res = eval_block(block, fn_tree, fn_context);
         }
         Bool(false) => res = Ok(Bool(false)),
         _ => {
@@ -216,14 +233,14 @@ fn eval_if(e: Expr, block: Block, fn_context: &mut FnContext) -> EvalRes<Value> 
 }
 
 // Evaluates a complete block. Returns the value from the last instruction evaluated.
-pub fn eval_block(block: Block, fn_context: &mut FnContext) -> EvalRes<Value> {
+pub fn eval_block(block: Block, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
     let context = fn_context.get_last_context()?;
     context.new_scope();
     let mut res: EvalRes<Value> =
         Err(EvalErr::NotFound("No expressions found.".to_string()));
 
-    for e in block {
-        res = eval_expr(e, fn_context);
+    for e in block.content.iter() {
+        res = eval_expr(e.clone(), fn_tree, fn_context);
     }
     // Should drop the scope after here
     //context.drop_current_scope();
@@ -235,17 +252,44 @@ pub fn eval_block(block: Block, fn_context: &mut FnContext) -> EvalRes<Value> {
 // Args should be mapped to the same name as the parameters, then a scope with
 // said args should first be created. After that a block should be evaluated
 // as normal. 
-pub fn eval_fn_call(fn_call: FunctionCall, fn_context: &mut FnContext) { // -> EvalRes<Value> {
+pub fn eval_fn_call(fn_call: FunctionCall, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
+    // Get the argument values. 
+    let mut arg_values: Vec<Value> = Vec::new();
+    for arg in fn_call.args.content {
+        arg_values.push(eval_expr(arg, fn_tree, fn_context)?);
+    }
+    
+    // Match the argument values with the parameter names. Place into the top scope of a new context.
+    let func = fn_tree.get_fn(fn_call.name)?;
+    fn_context.new_context()?.new_scope();
+    let context = fn_context.get_last_context()?;
+    let mut step = 0;
+    for param in func.params {
+        context.insert_to_current_scope(&param.name, &arg_values[step]);
+        step += 1;
+    }
+    
+    eval_block(func.block, fn_tree, fn_context)
 
 }
+
+fn eval_fn(args: Args, block: Block, fn_list: &mut Functions, fn_context: &mut FnContext) {}
 
 // pub fn eval_while() {}
 // pub fn eval_return() {}
 
 // Main entry
 // Should evaluate the program starting from "main"
-pub fn eval_program(fn_list: Functions) {
-    let fn_context = FnContext::new();
+pub fn eval_program(fn_tree: &mut Functions) -> EvalRes<FnContext> {
+    // Setup new contexts
+    let mut fn_context = FnContext::new();
+    fn_context.new_context()?;
+
+    let main = fn_tree.get_fn("main".to_string())?;
+    
+    eval_block(main.block, fn_tree, &mut fn_context)?;
+
+    Ok(fn_context)
 }
 
 #[cfg(test)]

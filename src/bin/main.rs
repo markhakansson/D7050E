@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 fn main() {
     // Function declaration 1
-    let function = "
+/*     let function = "
     fn func(a: i32, b: bool, c :i32) -> i32 {
         let d: bool = a == c;
         let hej: bool = ((1+3) == 4) == true;
@@ -18,13 +18,18 @@ fn main() {
         return 1;
     }
 
+    fn test(i: i32) -> () {
+        let a: i32 = i + 10;
+    }
+
     fn main(int: i32) -> i32 {
             let a: i32 = func(int, true, int);
+            test(5);
             return a;
     }
     ";
-    let tree = parse_program(function).unwrap().1;
-    println!("{:#?}", tree);  
+    let tree = parse_program(function);
+    println!("{:#?}", tree);   */
 
     // Function declaration 2
 /*     let function = "
@@ -52,17 +57,17 @@ fn main() {
     let intr = test_eval(tree); */
 
     // Eval block
-    /*     let block = "{
+/*     let block = "{
         let a: i32 = 3;
         let b: i32 = a + 17;
     };";
-    let tree = parse_block(block).unwrap().1;
+    let tree = Block::new(parse_block(block).unwrap().1);
     println!("{:#?}", tree);
-    let mut scope: Scope = HashMap::new();
-    let mut context: Context = vec![];
-    context.push(scope);
-    let intr = eval_block(tree, &mut context);
-    println!("{:#?}", context); */
+    let mut fn_context = FnContext::new();
+    fn_context.new_context();
+    let mut fns = Functions::new();
+    let intr = eval_block(tree, &fns, &mut fn_context);
+    println!("{:#?}, {:#?}, {:#?}",fn_context, fns, intr); */
 
 /*     let if_st = "{
         let a: bool = true;
@@ -79,11 +84,27 @@ fn main() {
         }; 
 
     }";
-    let if_tree = parse_block(if_st).unwrap().1;
+    let if_tree = Block::new(parse_block(if_st).unwrap().1);
     println!("{:#?}", if_tree);
     let mut fn_context = FnContext::new();
-    let intr = eval_block(if_tree, &mut fn_context);
+    fn_context.new_context();
+    let mut fns = Functions::new();
+    let intr = eval_block(if_tree, &mut fns, &mut fn_context);
     println!("{:#?}", fn_context); */
 
+    let main = "
+        fn test(i: i32) -> () {
+            let a: i32 = 3 + i;
+        }
+
+        fn main() -> () {
+            let a: i32 = 300;
+            let b: bool = true;
+            test(a);
+        }
+    ";
+    let mut main_tree = parse_program(main).unwrap().1;
+    let main_cntx = eval_program(&mut main_tree).unwrap();
+    println!("{:#?}", main_cntx);
 
 }

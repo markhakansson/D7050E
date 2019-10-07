@@ -208,7 +208,7 @@ fn parse_return(input: &str) -> IResult<&str, Expr> {
     Ok((substring, Expr::Return(Box::new(ret))))
 }
 
-fn parse_function(input: &str) -> IResult<&str, Expr> {
+fn parse_function(input: &str) -> IResult<&str, Function> {
     let (substring, (id, params, return_type, block)) = tuple((
         delimited(multispace0, preceded(tag("fn"), parse_var), multispace0),
         parse_fn_params,
@@ -216,8 +216,8 @@ fn parse_function(input: &str) -> IResult<&str, Expr> {
         parse_block,
     ))(input)?;
 
-    let func = Function::new(id.into(), params, block, return_type);
-    Ok((substring, Expr::Func(func)))
+    let func = Function::new(id.into(), params, Block::new(block), return_type);
+    Ok((substring, func))
 }
 
 // Parses lonely if statements
@@ -228,7 +228,7 @@ fn parse_if(input: &str) -> IResult<&str, Expr> {
         delimited(multispace0, parse_block, multispace0),
     ))(input)?;
 
-    Ok((substring, Expr::If(Box::new(exp), block)))
+    Ok((substring, Expr::If(Box::new(exp), Block::new(block) )))
 }
 
 //fn parse_else(input: &str) -> IResult<&str,Expr> {}
@@ -240,7 +240,7 @@ fn parse_while(input: &str) -> IResult<&str, Expr> {
         parse_block,
     ))(input)?;
 
-    Ok((substring, Expr::While(Box::new(expr), block)))
+    Ok((substring, Expr::While(Box::new(expr), Block::new(block) )))
 }
 
 // Parses variable assignments where the variable has already
@@ -258,10 +258,10 @@ fn parse_keyword(input: &str) -> IResult<&str, Expr> {
         alt((
             parse_return,
             parse_declaration,
-            parse_function,
             parse_if,
             parse_while,
             parse_var_expr,
+            parse_func_call,
         )),
         multispace0,
     )(input)
@@ -281,7 +281,7 @@ fn parse_func_call(input: &str) -> IResult<&str, Expr> {
 
     Ok((
         substring,
-        Expr::FuncCall(FunctionCall::new(fn_name.into(), args)),
+        Expr::FuncCall(FunctionCall::new(fn_name.into(), Args::new(args) )),
     ))
 }
 
@@ -308,8 +308,11 @@ fn parse_fn_args(input: &str) -> IResult<&str, Vec<Expr>> {
 
 // TODO: this should be the only public function in the parser.
 // Main entry to parse a complete program
-pub fn parse_program(input: &str) -> IResult<&str, Vec<Expr>> {
+/* pub fn parse_program(input: &str) -> IResult<&str, Vec<Expr>> {
     many0(delimited(multispace0, parse_keyword, multispace0))(input)
+} */
+pub fn parse_program(input: &str) -> IResult<&str, Functions> {
+    many0(delimited(multispace0, parse_function, multispace0))(input)
 }
 
 #[cfg(test)]
