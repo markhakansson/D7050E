@@ -117,6 +117,7 @@ pub enum Value {
     Num(i32),
     Var(String),
     Bool(bool),
+    Return(Box<Self>)
 }
 
 #[derive(Debug, PartialEq, Eq)]

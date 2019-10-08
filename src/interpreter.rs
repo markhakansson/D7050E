@@ -179,6 +179,7 @@ pub fn eval_expr(e: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -
         Expr::Let(var, _, expr) => assign_var(*var, *expr, fn_tree, fn_context), // ignore type for now
         Expr::If(expr, block) => eval_if(*expr, block, fn_tree, fn_context),
         Expr::FuncCall(fn_call) => eval_fn_call(fn_call, fn_tree, fn_context),
+        Expr::Return(val) => Ok(Value::Return(Box::new(eval_expr(*val, fn_tree, fn_context)?))),
         _ => Err(EvalErr::NotImplemented),
     }
 }
@@ -234,16 +235,21 @@ fn eval_if(e: Expr, block: Block, fn_tree: &mut Functions, fn_context: &mut FnCo
 
 // Evaluates a complete block. Returns the value from the last instruction evaluated.
 pub fn eval_block(block: Block, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
-    let context = fn_context.get_last_context()?;
-    context.new_scope();
+    fn_context.get_last_context()?.new_scope();
+    
     let mut res: EvalRes<Value> =
         Err(EvalErr::NotFound("No expressions found.".to_string()));
-
     for e in block.content.iter() {
         res = eval_expr(e.clone(), fn_tree, fn_context);
+        match res {
+            Ok(Value::Return(_)) => break,
+            _ => continue,
+        }
     }
-    // Should drop the scope after here
-    //context.drop_current_scope();
+
+    // Drop scope (comment out for debug)
+    fn_context.get_last_context()?.drop_current_scope();
+    
     res
 }
 
@@ -261,7 +267,7 @@ pub fn eval_fn_call(fn_call: FunctionCall, fn_tree: &mut Functions, fn_context: 
     
     // Match the argument values with the parameter names. Place into the top scope of a new context.
     let func = fn_tree.get_fn(fn_call.name)?;
-    fn_context.new_context()?.new_scope();
+    fn_context.new_context()?.new_scope(); 
     let context = fn_context.get_last_context()?;
     let mut step = 0;
     for param in func.params {
@@ -269,18 +275,39 @@ pub fn eval_fn_call(fn_call: FunctionCall, fn_tree: &mut Functions, fn_context: 
         step += 1;
     }
     
-    eval_block(func.block, fn_tree, fn_context)
+    let return_val = eval_block(func.block, fn_tree, fn_context);
 
+    // Drop the function's context (comment out for debug)
+    fn_context.drop_current_context();
+
+    // Unwraps return statements
+    match return_val {
+        Err(e) => Err(e),
+        Ok(Value::Return(val)) => Ok(*val),
+        _ => return_val
+    }
 }
 
-fn eval_fn(args: Args, block: Block, fn_list: &mut Functions, fn_context: &mut FnContext) {}
 
 // pub fn eval_while() {}
-// pub fn eval_return() {}
+
+// TODO: Currently the interpreter does not break after the first return statement, but continues evaluating 
+// expressions after that.
+//pub fn eval_return(return_val: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {}
 
 // Main entry
-// Should evaluate the program starting from "main"
-pub fn eval_program(fn_tree: &mut Functions) -> EvalRes<FnContext> {
+pub fn eval_program(fn_tree: &mut Functions) -> EvalRes<Value> {
+    // Setup new contexts
+    let mut fn_context = FnContext::new();
+    fn_context.new_context()?;
+
+    let main = fn_tree.get_fn("main".to_string())?;
+    
+    eval_block(main.block, fn_tree, &mut fn_context)
+}
+
+// Returns the FnContext instead
+pub fn eval_program_debug(fn_tree: &mut Functions) -> EvalRes<FnContext> {
     // Setup new contexts
     let mut fn_context = FnContext::new();
     fn_context.new_context()?;

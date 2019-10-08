@@ -7,12 +7,11 @@ use crate::d7050e::parser::*;
 use std::collections::HashMap;
 
 fn main() {
-    // Function declaration 1
-/*     let function = "
+    // Function declaration 1 parser
+    let function = "
     fn func(a: i32, b: bool, c :i32) -> i32 {
-        let d: bool = a == c;
-        let hej: bool = ((1+3) == 4) == true;
-        if d && hej == true {
+        let hej: bool = (a == c) && b;
+        if hej == true {
             return 0;
         };
         return 1;
@@ -22,14 +21,18 @@ fn main() {
         let a: i32 = i + 10;
     }
 
-    fn main(int: i32) -> i32 {
-            let a: i32 = func(int, true, int);
+    fn main() -> () {
+            let tjena: i32 = 5;
+            let a: i32 = func(tjena, false, 5);
             test(5);
             return a;
     }
     ";
-    let tree = parse_program(function);
-    println!("{:#?}", tree);   */
+    let mut tree = parse_program(function).unwrap().1;
+    let tree_eval = eval_program(&mut tree);
+    println!("Tree: {:#?}", tree); 
+    println!("Tree_eval: {:#?}", tree_eval); 
+
 
     // Function declaration 2
 /*     let function = "
@@ -92,7 +95,8 @@ fn main() {
     let intr = eval_block(if_tree, &mut fns, &mut fn_context);
     println!("{:#?}", fn_context); */
 
-    let main = "
+    // Function call 1 for interpreter
+/*     let main = "
         fn test(i: i32) -> () {
             let a: i32 = 3 + i;
         }
@@ -105,6 +109,6 @@ fn main() {
     ";
     let mut main_tree = parse_program(main).unwrap().1;
     let main_cntx = eval_program(&mut main_tree).unwrap();
-    println!("{:#?}", main_cntx);
+    println!("{:#?}", main_cntx); */
 
 }
