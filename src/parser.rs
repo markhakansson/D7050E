@@ -34,7 +34,7 @@ fn parse_type(input: &str) -> IResult<&str, Type> {
 }
 
 // Parses declaration of a variable
-fn parse_declaration(input: &str) -> IResult<&str, Expr> {
+pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, type_lit, expr)): (&str, (Expr, Type, Expr)) = tuple((
         preceded(
             multispace0,
@@ -153,7 +153,7 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
-                alt((parse_bool, parse_i32, parse_parens_expr, parse_var)),
+                alt((parse_bool, parse_i32, parse_parens_expr, parse_func_call, parse_var)),
                 parse_any_op,
                 parse_bin_expr,
             )),
@@ -162,6 +162,7 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
         parse_bool,
         parse_i32,
         parse_parens_expr,
+        parse_func_call,
         parse_var,
     ))(input)
 }
@@ -271,7 +272,8 @@ fn parse_keyword(input: &str) -> IResult<&str, Expr> {
 fn parse_right_expr(input: &str) -> IResult<&str, Expr> {
     delimited(
         multispace0,
-        alt((parse_func_call, parse_bin_expr)),
+        //alt((parse_func_call, parse_bin_expr)),
+        parse_bin_expr,
         multispace0,
     )(input)
 }

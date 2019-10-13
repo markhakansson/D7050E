@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 fn main() {
     // Function declaration 1 parser
-    let function = "
+/*     let function = "
     fn func(a: i32, b: bool, c :i32) -> i32 {
         let hej: bool = (a == c) && b;
         if hej == true {
@@ -31,7 +31,7 @@ fn main() {
     let mut tree = parse_program(function).unwrap().1;
     let tree_eval = eval_program(&mut tree);
     println!("Tree: {:#?}", tree); 
-    println!("Tree_eval: {:#?}", tree_eval); 
+    println!("Tree_eval: {:#?}", tree_eval);  */
 
 
     // Function declaration 2
@@ -110,5 +110,45 @@ fn main() {
     let mut main_tree = parse_program(main).unwrap().1;
     let main_cntx = eval_program(&mut main_tree).unwrap();
     println!("{:#?}", main_cntx); */
+
+/*     let fibo = "
+        fn fibo(i: i32) -> i32 {
+            if i == 1 {
+                return 0;
+            };
+            if i == 2 {
+                return 1;
+            };
+
+            return fibo(i-1) + fibo(i-2);
+
+        }
+
+        fn fuck(off: i32) -> i32 {
+            return off*2;
+        }
+
+        fn main() -> () {
+            let a: i32 = 7;
+            fibo(a);
+        }
+
+    "; */
+    let fibo = "
+    fn main() -> () {
+        let a: i32 = 0;
+        let variable: i32 = 0;
+        while a > 3 {
+            a += 1;
+            variable += 10;
+        };
+        return variable;
+    }
+    ";
+
+    let mut tree = parse_program(fibo).unwrap().1;
+    let tree_eval = eval_program(&mut tree);
+    println!("Tree: {:#?}", tree); 
+    println!("Tree_eval: {:#?}", tree_eval); 
 
 }

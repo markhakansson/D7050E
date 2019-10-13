@@ -180,6 +180,7 @@ pub fn eval_expr(e: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -
         Expr::If(expr, block) => eval_if(*expr, block, fn_tree, fn_context),
         Expr::FuncCall(fn_call) => eval_fn_call(fn_call, fn_tree, fn_context),
         Expr::Return(val) => Ok(Value::Return(Box::new(eval_expr(*val, fn_tree, fn_context)?))),
+        Expr::While(expr, block) => eval_while(*expr, block, fn_tree, fn_context),
         _ => Err(EvalErr::NotImplemented),
     }
 }
@@ -233,6 +234,20 @@ fn eval_if(e: Expr, block: Block, fn_tree: &mut Functions, fn_context: &mut FnCo
     res
 }
 
+
+pub fn eval_while(e: Expr, block: Block, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
+    let if_val: EvalRes<Value> = eval_if(e.clone(), block.clone(), fn_tree, fn_context);
+    let ret_val: EvalRes<Value>;
+    println!("while");
+    match if_val {
+        Ok(Bool(false)) => ret_val = if_val,
+        Ok(_) => ret_val = eval_while(e.clone(), block.clone(), fn_tree, fn_context),
+        Err(_) => ret_val = Err(EvalErr::WrongType("Cannot evaluate condition. Not a boolean expression.".to_string())),
+    }
+
+    ret_val
+}
+
 // Evaluates a complete block. Returns the value from the last instruction evaluated.
 pub fn eval_block(block: Block, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
     fn_context.get_last_context()?.new_scope();
@@ -253,12 +268,8 @@ pub fn eval_block(block: Block, fn_tree: &mut Functions, fn_context: &mut FnCont
     res
 }
 
-// TODO
-// Evaluates a function call in the program.
-// Args should be mapped to the same name as the parameters, then a scope with
-// said args should first be created. After that a block should be evaluated
-// as normal. 
 pub fn eval_fn_call(fn_call: FunctionCall, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {
+    println!("{:#?}", fn_context);
     // Get the argument values. 
     let mut arg_values: Vec<Value> = Vec::new();
     for arg in fn_call.args.content {
@@ -287,13 +298,6 @@ pub fn eval_fn_call(fn_call: FunctionCall, fn_tree: &mut Functions, fn_context: 
         _ => return_val
     }
 }
-
-
-// pub fn eval_while() {}
-
-// TODO: Currently the interpreter does not break after the first return statement, but continues evaluating 
-// expressions after that.
-//pub fn eval_return(return_val: Expr, fn_tree: &mut Functions, fn_context: &mut FnContext) -> EvalRes<Value> {}
 
 // Main entry
 pub fn eval_program(fn_tree: &mut Functions) -> EvalRes<Value> {
