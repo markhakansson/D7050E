@@ -34,7 +34,7 @@ fn parse_type(input: &str) -> IResult<&str, Type> {
 }
 
 // Parses declaration of a variable
-pub fn parse_declaration(input: &str) -> IResult<&str, Expr> {
+fn parse_declaration(input: &str) -> IResult<&str, Expr> {
     let (substring, (id, type_lit, expr)): (&str, (Expr, Type, Expr)) = tuple((
         preceded(
             multispace0,
@@ -153,7 +153,13 @@ fn parse_bin_expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((
-                alt((parse_bool, parse_i32, parse_parens_expr, parse_func_call, parse_var)),
+                alt((
+                    parse_bool,
+                    parse_i32,
+                    parse_parens_expr,
+                    parse_func_call,
+                    parse_var,
+                )),
                 parse_any_op,
                 parse_bin_expr,
             )),
@@ -191,7 +197,7 @@ fn parse_fn_params(input: &str) -> IResult<&str, Vec<Param>> {
 }
 
 // Parses blocks of keyword statements.
-pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         tag("{"),
         many0(alt((
@@ -229,7 +235,7 @@ fn parse_if(input: &str) -> IResult<&str, Expr> {
         delimited(multispace0, parse_block, multispace0),
     ))(input)?;
 
-    Ok((substring, Expr::If(Box::new(exp), Block::new(block) )))
+    Ok((substring, Expr::If(Box::new(exp), Block::new(block))))
 }
 
 //fn parse_else(input: &str) -> IResult<&str,Expr> {}
@@ -241,7 +247,7 @@ fn parse_while(input: &str) -> IResult<&str, Expr> {
         parse_block,
     ))(input)?;
 
-    Ok((substring, Expr::While(Box::new(expr), Block::new(block) )))
+    Ok((substring, Expr::While(Box::new(expr), Block::new(block))))
 }
 
 // Parses variable assignments where the variable has already
@@ -283,7 +289,7 @@ fn parse_func_call(input: &str) -> IResult<&str, Expr> {
 
     Ok((
         substring,
-        Expr::FuncCall(FunctionCall::new(fn_name.into(), Args::new(args) )),
+        Expr::FuncCall(FunctionCall::new(fn_name.into(), Args::new(args))),
     ))
 }
 
@@ -310,9 +316,7 @@ fn parse_fn_args(input: &str) -> IResult<&str, Vec<Expr>> {
 
 // TODO: this should be the only public function in the parser.
 // Main entry to parse a complete program
-/* pub fn parse_program(input: &str) -> IResult<&str, Vec<Expr>> {
-    many0(delimited(multispace0, parse_keyword, multispace0))(input)
-} */
+
 pub fn parse_program(input: &str) -> IResult<&str, Functions> {
     many0(delimited(multispace0, parse_function, multispace0))(input)
 }
@@ -360,8 +364,12 @@ mod parse_tests {
         assert_eq!(parse_keyword("if a == true { return 0; }").is_ok(), true);
         assert_eq!(parse_keyword("while true { return 1; }").is_ok(), true);
         assert_eq!(parse_keyword("a += 5;").is_ok(), true);
+    }
+
+    #[test]
+    fn test_parse_function() {
         assert_eq!(
-            parse_keyword(
+            parse_function(
                 "
             fn func(a: i32, b: bool, c :i32) -> i32 {
                 let d: bool = a == c;
@@ -378,7 +386,7 @@ mod parse_tests {
 
     #[test]
     fn test_parse_program() {
-        let program = "
+        let program_1 = "
         fn test(b: bool) -> i32 {
             let: a: i32 = 0;
             if b {
@@ -396,6 +404,27 @@ mod parse_tests {
                 b = false;
             };
         }";
-        assert_eq!(parse_program(program).is_ok(), true);
+        let program_2 = "
+        fn func(a: i32, b: bool, c :i32) -> i32 {
+            let hej: bool = (a == c) && b;
+            if hej == true {
+                return 0;
+            };
+            return 1;
+        }
+
+        fn test(i: i32) -> () {
+            let a: i32 = i + 10;
+        }
+
+        fn main() -> () {
+                let tjena: i32 = 5;
+                let a: i32 = func(tjena, false, 5);
+                test(5);
+                return a;
+        }
+        ";
+        assert_eq!(parse_program(program_1).is_ok(), true);
+        assert_eq!(parse_program(program_2).is_ok(), true);
     }
 }

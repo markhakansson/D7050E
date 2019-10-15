@@ -1,19 +1,21 @@
+use std::fmt;
+
 pub type Args = Block;
 pub type Params = Vec<Param>;
 pub type Functions = Vec<Function>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Block{
-    pub content: Vec<Expr>
+pub struct Block {
+    pub content: Vec<Expr>,
 }
 
 impl Block {
     pub fn new(exprs: Vec<Expr>) -> Block {
-        Block{content: exprs}
+        Block { content: exprs }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MathToken {
     Minus,
     Plus,
@@ -22,15 +24,39 @@ pub enum MathToken {
     Modulo,
 }
 
+impl fmt::Display for MathToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let token = match self {
+            Self::Minus => "-",
+            Self::Plus => "+",
+            Self::Multiply => "*",
+            Self::Division => "/",
+            Self::Modulo => "%",
+        };
+        write!(f, "{}", token)
+    }
+}
+
 // Need to handle Not
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BoolToken {
     And,
     Or,
     Not, // implementation neeeded
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl fmt::Display for BoolToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let token = match self {
+            Self::And => "&&",
+            Self::Or => "||",
+            Self::Not => "!",
+        };
+        write!(f, "{}", token)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelToken {
     Leq,
     Geq,
@@ -38,7 +64,19 @@ pub enum RelToken {
     Neq,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl fmt::Display for RelToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let token = match self {
+            RelToken::Leq => "<",
+            RelToken::Geq => ">",
+            RelToken::Equal => "==",
+            RelToken::Neq => "!=",
+        };
+        write!(f, "{}", token)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VarToken {
     Assign,
     PlusEq,
@@ -46,7 +84,19 @@ pub enum VarToken {
     MulEq,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl fmt::Display for VarToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let token = match self {
+            VarToken::Assign => "=",
+            VarToken::PlusEq => "+=",
+            VarToken::MinEq => "-=",
+            VarToken::MulEq => "*=",
+        };
+        write!(f, "{}", token)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Op {
     MathOp(MathToken),
     BoolOp(BoolToken),
@@ -54,17 +104,33 @@ pub enum Op {
     VarOp(VarToken),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum BoolState {
-    True,
-    False,
+impl fmt::Display for Op {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Op::MathOp(token) => token.fmt(f),
+            Op::BoolOp(token) => token.fmt(f),
+            Op::RelOp(token) => token.fmt(f),
+            Op::VarOp(token) => token.fmt(f),
+        }
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     Int32,
     Bool,
     Void, // for functions
+}
+
+impl From<Type> for String {
+    fn from(t: Type) -> String {
+        match t {
+            Type::Int32 => "Int32".to_string(),
+            Type::Bool => "Bool".to_string(),
+            Type::Void => "Void".to_string(),
+            _ => panic!("Could not convert to String. No such type found."),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -117,7 +183,7 @@ pub enum Value {
     Num(i32),
     Var(String),
     Bool(bool),
-    Return(Box<Self>)
+    Return(Box<Self>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -157,7 +223,7 @@ pub enum Expr {
     If(Box<Expr>, Block),
     IfElse(Box<Expr>, Block),
     While(Box<Expr>, Block),
-    Func(Function),
+    //Func(Function),
     FuncCall(FunctionCall),
     Return(Box<Expr>),
 }
@@ -188,6 +254,8 @@ impl From<Expr> for String {
     fn from(e: Expr) -> String {
         match e {
             Expr::Var(s) => s,
+            Expr::Bool(b) => format!("{}", b),
+            Expr::Num(i) => format!("{}", i),
             _ => panic!("Could not convert to String. Wrong type."),
         }
     }
