@@ -10,9 +10,9 @@ pub type Scope<T> = HashMap<String, T>;
 pub type Context<T> = Vec<Scope<T>>; // Context is a stack of scopes
 
 pub trait ContextMethods<T, U> {
-    fn update_var(&mut self, key: &str, val: &T) -> U;//EvalRes<T>;
+    fn update_var(&mut self, key: &str, val: &T) -> U;
     fn drop_current_scope(&mut self);
-    fn get_val(&mut self, key: &str) -> U;//EvalRes<T>;
+    fn get_val(&mut self, key: &str) -> U;
     fn insert_to_current_scope(&mut self, key: &str, val: &T);
     fn new_scope(&mut self);
 }
@@ -80,7 +80,7 @@ impl ContextMethods<Type, TypeRes<Type>> for Context<Type> {
             }
         }
 
-        Err(TypeErr(format!("Variable {} was not found in scope.", key)))
+        Err(TypeErr(format!("cannot find value ´{}´ in this scope", key)))
     }
 
     fn drop_current_scope(&mut self) {
@@ -97,7 +97,7 @@ impl ContextMethods<Type, TypeRes<Type>> for Context<Type> {
             };
         }
 
-        Err(TypeErr(format!("Variable {} was not found in scope.", key)))
+        Err(TypeErr(format!("cannot find value ´{}´ in this scope", key)))
     }
 
     fn insert_to_current_scope(&mut self, key: &str, val: &Type) {
@@ -114,20 +114,38 @@ impl ContextMethods<Type, TypeRes<Type>> for Context<Type> {
     }
 }
 
-pub trait FnContextMethods<T> {
-    fn drop_current_context(&mut self);
-    fn get_last_context(&mut self) -> EvalRes<&mut Context<T>>;
-    fn new_context(&mut self) -> EvalRes<&mut Context<T>>;
+pub type FnContext<'a, T> = Vec<Context<T>>; // FnContext is a stack of scopes
+
+pub trait FnContextMethods<'a, T, U> {
+    fn drop_current_context(&'a mut self);
+    fn get_last_context(&'a mut self) -> U;
+    fn new_context(&'a mut self) -> U;
 }
 
-pub type FnContext<T> = Vec<Context<T>>; // FnContext is a stack of scopes
-
-impl FnContextMethods<Value> for FnContext<Value> {
+impl<'a> FnContextMethods<'a, Type, TypeRes<&'a mut Context<Type>>> for FnContext<'a, Type> {
     fn drop_current_context(&mut self) {
         self.pop();
     }
 
-    fn get_last_context(&mut self) -> EvalRes<&mut Context<Value>> {
+    fn get_last_context(&'a mut self) -> TypeRes<&'a mut Context<Type>> {
+        match self.last_mut() {
+            Some(context) => Ok(context),
+            None => Err(TypeErr("No context found in FnContext.".to_string())),
+        }
+    }
+
+    fn new_context(&'a mut self) -> TypeRes<&'a mut Context<Type>> {
+        self.push(Context::new());
+        self.get_last_context()
+    }
+}
+
+impl<'a> FnContextMethods<'a, Value, EvalRes<&'a mut Context<Value>>> for FnContext<'a, Value> {
+    fn drop_current_context(&mut self) {
+        self.pop();
+    }
+
+    fn get_last_context(&'a mut self) -> EvalRes<&'a mut Context<Value>> {
         match self.last_mut() {
             Some(context) => Ok(context),
             None => Err(EvalErr::NotFound(
@@ -136,17 +154,17 @@ impl FnContextMethods<Value> for FnContext<Value> {
         }
     }
 
-    fn new_context(&mut self) -> EvalRes<&mut Context<Value>> {
+    fn new_context(&'a mut self) -> EvalRes<&'a mut Context<Value>> {
         self.push(Context::new());
         self.get_last_context()
     }
 }
 
-pub trait FunctionsMethods {
-    fn get_fn(&mut self, name: String) -> EvalRes<Function>;
+pub trait FunctionsMethods<T> {
+    fn get_fn(&mut self, name: String) -> T; //EvalRes<Function>;
 }
 
-impl FunctionsMethods for Functions {
+impl FunctionsMethods<EvalRes<Function>> for Functions {
     fn get_fn(&mut self, name: String) -> EvalRes<Function> {
         for func in self.iter() {
             if func.name == name {
@@ -154,5 +172,19 @@ impl FunctionsMethods for Functions {
             }
         }
         Err(EvalErr::NotFound("Function not found in tree.".to_string()))
+    }
+}
+
+impl FunctionsMethods<TypeRes<Function>> for Functions {
+    fn get_fn(&mut self, name: String) -> TypeRes<Function> {
+        for func in self.iter() {
+            if func.name == name {
+                return Ok(func.clone());
+            }
+        }
+        Err(TypeErr(format!(
+            "function ´{}´ not found",
+            name
+        )))
     }
 }

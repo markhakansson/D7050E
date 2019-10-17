@@ -197,7 +197,7 @@ fn parse_fn_params(input: &str) -> IResult<&str, Vec<Param>> {
 }
 
 // Parses blocks of keyword statements.
-fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
+pub fn parse_block(input: &str) -> IResult<&str, Vec<Expr>> {
     delimited(
         tag("{"),
         many0(alt((

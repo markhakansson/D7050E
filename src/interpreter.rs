@@ -7,7 +7,7 @@ use crate::context::*;
 use std::collections::HashMap;
 
 pub type EvalRes<T> = Result<T, EvalErr>;
-pub type FnContext = context::FnContext<Value>;
+pub type FnContext<'a> = context::FnContext<'a, Value>;
 pub type Context = context::Context<Value>;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -217,7 +217,8 @@ pub fn eval_fn_call(
     }
 
     // Match the argument values with the parameter names. Place into the top scope of a new context.
-    let func = fn_tree.get_fn(fn_call.name)?;
+    let func_temp: EvalRes<Function> = fn_tree.get_fn(fn_call.name);
+    let func = func_temp?;
     fn_context.new_context()?.new_scope();
     let context = fn_context.get_last_context()?;
     let mut step = 0;
@@ -245,7 +246,8 @@ pub fn eval_program(fn_tree: &mut Functions) -> EvalRes<Value> {
     let mut fn_context = FnContext::new();
     fn_context.new_context()?;
 
-    let main = fn_tree.get_fn("main".to_string())?;
+    let main_res: EvalRes<Function> = fn_tree.get_fn("main".to_string());
+    let main = main_res?;
 
     eval_block(main.block, fn_tree, &mut fn_context)
 }
@@ -256,7 +258,8 @@ pub fn eval_program_debug(fn_tree: &mut Functions) -> EvalRes<FnContext> {
     let mut fn_context = FnContext::new();
     fn_context.new_context()?;
 
-    let main = fn_tree.get_fn("main".to_string())?;
+    let main_res: EvalRes<Function> = fn_tree.get_fn("main".to_string());
+    let main: Function = main_res?;
 
     eval_block(main.block, fn_tree, &mut fn_context)?;
 

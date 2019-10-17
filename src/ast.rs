@@ -190,9 +190,10 @@ pub enum Value {
 pub enum Keyword {
     Let(Box<Node>, Type, Box<Node>),
     If(Box<Node>, Block),
-    IfElse(Box<Node>, Block),
+    IfElse(Box<Node>, Block), // not implemented yet
     While(Box<Node>, Block),
-    Func(Function),
+    //Func(Function),
+    FuncCall(FunctionCall),
     Return(Box<Node>),
 }
 
@@ -221,7 +222,7 @@ pub enum Expr {
     Let(Box<Expr>, Type, Box<Expr>),
     VarOp(Box<Expr>, Op, Box<Expr>),
     If(Box<Expr>, Block),
-    IfElse(Box<Expr>, Block),
+    IfElse(Box<Expr>, Block), // not implemented yet
     While(Box<Expr>, Block),
     //Func(Function),
     FuncCall(FunctionCall),
