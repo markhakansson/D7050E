@@ -80,7 +80,10 @@ impl ContextMethods<Type, TypeRes<Type>> for Context<Type> {
             }
         }
 
-        Err(TypeErr(format!("cannot find value ´{}´ in this scope", key)))
+        Err(TypeErr(format!(
+            "cannot find value ´{}´ in this scope",
+            key
+        )))
     }
 
     fn drop_current_scope(&mut self) {
@@ -97,7 +100,10 @@ impl ContextMethods<Type, TypeRes<Type>> for Context<Type> {
             };
         }
 
-        Err(TypeErr(format!("cannot find value ´{}´ in this scope", key)))
+        Err(TypeErr(format!(
+            "cannot find value ´{}´ in this scope",
+            key
+        )))
     }
 
     fn insert_to_current_scope(&mut self, key: &str, val: &Type) {
@@ -182,9 +188,6 @@ impl FunctionsMethods<TypeRes<Function>> for Functions {
                 return Ok(func.clone());
             }
         }
-        Err(TypeErr(format!(
-            "function ´{}´ not found",
-            name
-        )))
+        Err(TypeErr(format!("function ´{}´ not found", name)))
     }
 }
