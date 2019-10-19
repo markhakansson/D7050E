@@ -120,15 +120,15 @@ impl ContextMethods<Type, TypeRes<Type>> for Context<Type> {
     }
 }
 
-pub type FnContext<'a, T> = Vec<Context<T>>; // FnContext is a stack of scopes
+pub type ContextStack<'a, T> = Vec<Context<T>>; // ContextStack is a stack of contexts
 
-pub trait FnContextMethods<'a, T, U> {
+pub trait ContextStackMethods<'a, T, U> {
     fn drop_current_context(&'a mut self);
     fn get_last_context(&'a mut self) -> U;
     fn new_context(&'a mut self) -> U;
 }
 
-impl<'a> FnContextMethods<'a, Type, TypeRes<&'a mut Context<Type>>> for FnContext<'a, Type> {
+impl<'a> ContextStackMethods<'a, Type, TypeRes<&'a mut Context<Type>>> for ContextStack<'a, Type> {
     fn drop_current_context(&mut self) {
         self.pop();
     }
@@ -146,7 +146,7 @@ impl<'a> FnContextMethods<'a, Type, TypeRes<&'a mut Context<Type>>> for FnContex
     }
 }
 
-impl<'a> FnContextMethods<'a, Value, EvalRes<&'a mut Context<Value>>> for FnContext<'a, Value> {
+impl<'a> ContextStackMethods<'a, Value, EvalRes<&'a mut Context<Value>>> for ContextStack<'a, Value> {
     fn drop_current_context(&mut self) {
         self.pop();
     }

@@ -7,7 +7,7 @@ use crate::context::*;
 use std::collections::HashMap;
 
 pub type EvalRes<T> = Result<T, EvalErr>;
-pub type FnContext<'a> = context::FnContext<'a, Value>;
+pub type FnContext<'a> = context::ContextStack<'a, Value>;
 pub type Context = context::Context<Value>;
 
 #[derive(Debug, PartialEq, Eq)]

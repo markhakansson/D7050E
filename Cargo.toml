@@ -10,4 +10,4 @@ edition = "2018"
 nom = "5.0.1"
 derive_more = "0.15.0"
 nom_locate = "1.0.0"
-
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "llvm8-0" }
