@@ -167,7 +167,7 @@ impl<'a> ContextStackMethods<'a, Value, EvalRes<&'a mut Context<Value>>> for Con
 }
 
 pub trait FunctionsMethods<T> {
-    fn get_fn(&mut self, name: String) -> T; //EvalRes<Function>;
+    fn get_fn(&mut self, name: String) -> T; 
 }
 
 impl FunctionsMethods<EvalRes<Function>> for Functions {

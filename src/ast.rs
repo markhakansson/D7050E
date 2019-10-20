@@ -186,6 +186,38 @@ pub enum Value {
     Return(Box<Self>),
 }
 
+// Implement TryForm trait instead to get a Result back
+impl From<Value> for i32 {
+    fn from(v: Value) -> i32 {
+        match v {
+            Value::Num(i) => i,
+            _ => panic!("Could not convert to i32. Wrong type."),
+        }
+    }
+}
+
+// Implement TryForm trait instead to get a Result back
+impl From<Value> for bool {
+    fn from(v: Value) -> bool {
+        match v {
+            Value::Bool(b) => b,
+            _ => panic!("Could not convert bool. Wrong type."),
+        }
+    }
+}
+
+impl From<i32> for Value {
+    fn from(i: i32) -> Self {
+        Value::Num(i)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Value::Bool(b)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Keyword {
     Let(Box<Node>, Type, Box<Node>),
@@ -229,18 +261,6 @@ pub enum Expr {
     Return(Box<Expr>),
 }
 
-impl From<i32> for Value {
-    fn from(i: i32) -> Self {
-        Value::Num(i)
-    }
-}
-
-impl From<bool> for Value {
-    fn from(b: bool) -> Self {
-        Value::Bool(b)
-    }
-}
-
 impl From<Expr> for i32 {
     fn from(e: Expr) -> i32 {
         match e {
@@ -268,26 +288,6 @@ impl From<Expr> for bool {
         match e {
             Expr::Bool(b) => b,
             _ => panic!("Could not convert to bool. Wrong type."),
-        }
-    }
-}
-
-// Implement TryForm trait instead to get a Result back
-impl From<Value> for i32 {
-    fn from(v: Value) -> i32 {
-        match v {
-            Value::Num(i) => i,
-            _ => panic!("Could not convert to i32. Wrong type."),
-        }
-    }
-}
-
-// Implement TryForm trait instead to get a Result back
-impl From<Value> for bool {
-    fn from(v: Value) -> bool {
-        match v {
-            Value::Bool(b) => b,
-            _ => panic!("Could not convert bool. Wrong type."),
         }
     }
 }
