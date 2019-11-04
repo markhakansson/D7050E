@@ -1,15 +1,8 @@
 use crate::ast::*;
 use crate::context::*;
 use crate::parser::*;
-use std::fmt;
 
 pub type TypeRes<T> = Result<T, TypeErr>;
-
-/* #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TypeErr {
-    Mismatch(String),
-    Unknown(String),
-} */
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeErr(pub String);
@@ -50,10 +43,9 @@ fn tc_i32_expr(first: Type, op: Op, second: Type) -> TypeRes<Type> {
             Op::MathOp(MathToken::Multiply) => Ok(Type::Int32),
             Op::MathOp(MathToken::Plus) => Ok(Type::Int32),
             Op::MathOp(MathToken::Minus) => Ok(Type::Int32),
-            Op::MathOp(MathToken::Modulo) => Ok(Type::Int32),
             Op::RelOp(RelToken::Equal) => Ok(Type::Int32),
-            Op::RelOp(RelToken::Geq) => Ok(Type::Int32),
-            Op::RelOp(RelToken::Leq) => Ok(Type::Int32),
+            Op::RelOp(RelToken::Ge) => Ok(Type::Int32),
+            Op::RelOp(RelToken::Le) => Ok(Type::Int32),
             Op::RelOp(RelToken::Neq) => Ok(Type::Int32),
             _ => err_no_impl(first, op, second),
         }
@@ -71,8 +63,8 @@ fn tc_bool_expr(first: Type, op: Op, second: Type) -> TypeRes<Type> {
             Op::BoolOp(BoolToken::And) => Ok(Type::Bool),
             Op::BoolOp(BoolToken::Or) => Ok(Type::Bool),
             Op::RelOp(RelToken::Equal) => Ok(Type::Bool),
-            Op::RelOp(RelToken::Geq) => Ok(Type::Bool),
-            Op::RelOp(RelToken::Leq) => Ok(Type::Bool),
+            Op::RelOp(RelToken::Ge) => Ok(Type::Bool),
+            Op::RelOp(RelToken::Le) => Ok(Type::Bool),
             Op::RelOp(RelToken::Neq) => Ok(Type::Bool),
             _ => err_no_impl(first, op, second),
         }

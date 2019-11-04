@@ -25,10 +25,9 @@ fn eval_i32_expr(l: i32, op: Op, r: i32) -> EvalRes<Value> {
         Op::MathOp(MathToken::Multiply) => Ok(Num(l * r)),
         Op::MathOp(MathToken::Plus) => Ok(Num(l + r)),
         Op::MathOp(MathToken::Minus) => Ok(Num(l - r)),
-        Op::MathOp(MathToken::Modulo) => Ok(Num(l % r)),
         Op::RelOp(RelToken::Equal) => Ok(Bool(l == r)),
-        Op::RelOp(RelToken::Geq) => Ok(Bool(l > r)),
-        Op::RelOp(RelToken::Leq) => Ok(Bool(l < r)),
+        Op::RelOp(RelToken::Ge) => Ok(Bool(l > r)),
+        Op::RelOp(RelToken::Le) => Ok(Bool(l < r)),
         Op::RelOp(RelToken::Neq) => Ok(Bool(l != r)),
         _ => Err(EvalErr::WrongOp(String::from("Not an i32 operator."))),
     }
@@ -39,8 +38,8 @@ fn eval_bool_expr(l: bool, op: Op, r: bool) -> EvalRes<Value> {
         Op::BoolOp(BoolToken::And) => Ok(Bool(l && r)),
         Op::BoolOp(BoolToken::Or) => Ok(Bool(l || r)),
         Op::RelOp(RelToken::Equal) => Ok(Bool(l == r)),
-        Op::RelOp(RelToken::Geq) => Ok(Bool(l > r)),
-        Op::RelOp(RelToken::Leq) => Ok(Bool(l < r)),
+        Op::RelOp(RelToken::Ge) => Ok(Bool(l > r)),
+        Op::RelOp(RelToken::Le) => Ok(Bool(l < r)),
         Op::RelOp(RelToken::Neq) => Ok(Bool(l != r)),
         _ => Err(EvalErr::WrongOp(String::from("Not a boolean operator."))),
     }

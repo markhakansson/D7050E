@@ -98,7 +98,6 @@ fn parse_bool_op(input: &str) -> IResult<&str, Op> {
         alt((
             map(tag("&&"), |_| Op::BoolOp(BoolToken::And)),
             map(tag("||"), |_| Op::BoolOp(BoolToken::Or)),
-            map(tag("!"), |_| Op::BoolOp(BoolToken::Not)),
         )),
         multispace0,
     )(input)
@@ -109,8 +108,8 @@ fn parse_rel_op(input: &str) -> IResult<&str, Op> {
         multispace0,
         alt((
             map(tag("=="), |_| Op::RelOp(RelToken::Equal)),
-            map(tag("<"), |_| Op::RelOp(RelToken::Leq)),
-            map(tag(">"), |_| Op::RelOp(RelToken::Geq)),
+            map(tag("<"), |_| Op::RelOp(RelToken::Le)),
+            map(tag(">"), |_| Op::RelOp(RelToken::Ge)),
             map(tag("!="), |_| Op::RelOp(RelToken::Neq)),
         )),
         multispace0,
@@ -122,7 +121,6 @@ fn parse_math_op(input: &str) -> IResult<&str, Op> {
         multispace0,
         alt((
             map(tag("/"), |_| Op::MathOp(MathToken::Division)),
-            map(tag("%"), |_| Op::MathOp(MathToken::Modulo)),
             map(tag("*"), |_| Op::MathOp(MathToken::Multiply)),
             map(tag("-"), |_| Op::MathOp(MathToken::Minus)),
             map(tag("+"), |_| Op::MathOp(MathToken::Plus)),
@@ -388,7 +386,7 @@ mod parse_tests {
     fn test_parse_program() {
         let program_1 = "
         fn test(b: bool) -> i32 {
-            let: a: i32 = 0;
+            let a: i32 = 0;
             if b {
                 a = 50;
             };
@@ -424,7 +422,12 @@ mod parse_tests {
                 return a;
         }
         ";
+        let program_3 ="
+        fn func() -> void {
+            return;
+        }";
         assert_eq!(parse_program(program_1).is_ok(), true);
         assert_eq!(parse_program(program_2).is_ok(), true);
+        assert_eq!(parse_program(program_3).is_ok(), true);
     }
 }

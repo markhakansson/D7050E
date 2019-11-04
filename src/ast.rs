@@ -21,7 +21,6 @@ pub enum MathToken {
     Plus,
     Multiply,
     Division,
-    Modulo,
 }
 
 impl fmt::Display for MathToken {
@@ -31,7 +30,6 @@ impl fmt::Display for MathToken {
             Self::Plus => "+",
             Self::Multiply => "*",
             Self::Division => "/",
-            Self::Modulo => "%",
         };
         write!(f, "{}", token)
     }
@@ -42,7 +40,6 @@ impl fmt::Display for MathToken {
 pub enum BoolToken {
     And,
     Or,
-    Not, // implementation neeeded
 }
 
 impl fmt::Display for BoolToken {
@@ -50,7 +47,6 @@ impl fmt::Display for BoolToken {
         let token = match self {
             Self::And => "&&",
             Self::Or => "||",
-            Self::Not => "!",
         };
         write!(f, "{}", token)
     }
@@ -58,8 +54,8 @@ impl fmt::Display for BoolToken {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelToken {
-    Leq,
-    Geq,
+    Le,
+    Ge,
     Equal,
     Neq,
 }
@@ -67,8 +63,8 @@ pub enum RelToken {
 impl fmt::Display for RelToken {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let token = match self {
-            RelToken::Leq => "<",
-            RelToken::Geq => ">",
+            RelToken::Le => "<",
+            RelToken::Ge => ">",
             RelToken::Equal => "==",
             RelToken::Neq => "!=",
         };
