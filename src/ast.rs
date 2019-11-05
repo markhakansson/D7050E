@@ -220,7 +220,6 @@ pub enum Keyword {
     If(Box<Node>, Block),
     IfElse(Box<Node>, Block), // not implemented yet
     While(Box<Node>, Block),
-    //Func(Function),
     FuncCall(FunctionCall),
     Return(Box<Node>),
 }
@@ -252,7 +251,6 @@ pub enum Expr {
     If(Box<Expr>, Block),
     IfElse(Box<Expr>, Block), // not implemented yet
     While(Box<Expr>, Block),
-    //Func(Function),
     FuncCall(FunctionCall),
     Return(Box<Expr>),
 }

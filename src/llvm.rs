@@ -17,15 +17,15 @@ use std::error::Error;
 
 type ExprFunc = unsafe extern "C" fn() -> i32;
 
-pub struct Compiler {
-    pub context: Context,
-    pub builder: Builder,
-    pub module: Module,
+pub struct Compiler<'a> {
+    pub context: &'a Context,
+    pub builder: &'a Builder,
+    pub module: &'a Module,
     variables: HashMap<String, PointerValue>,
     fn_value_opt: Option<FunctionValue>,
 }
 
-impl Compiler {
+impl<'a> Compiler<'a> {
     #[inline]
     fn get_function(&self, name: &str) -> Option<FunctionValue> {
         self.module.get_function(name)
@@ -56,7 +56,7 @@ impl Compiler {
             },
             Expr::Num(i) => self.context.i32_type().const_int(i as u64, false),
             Expr::BinOp(l, op, r) => self.compile_bin_op(*l, op, *r),
-            _ => panic!(),
+            _ => unimplemented!(),
         }
 
     }     
@@ -121,6 +121,27 @@ impl Compiler {
         alloca
     }
 
+    fn compile_keyword(&mut self, keyword: Expr) -> (InstructionValue, bool) {
+        match keyword {
+            Expr::Let(var, var_type, expr) => match *var {
+                Expr::Var(var) => {
+                    let val = self.compile_expr(*expr);
+                    let alloca = self.create_entry_block_alloca(&var);
+                    let store = self.builder.build_store(alloca, val);
+
+                    (store, false)
+                },
+                _ => panic!(),
+            },
+            _ => unimplemented!(),
+        }
+    }
+
+    fn compile_block(&mut self, block: Vec<Expr>) {
+        for expr in &block {
+
+        }
+    }
 
 }
 
@@ -133,15 +154,32 @@ pub fn test() {
     let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
 
     let block = parse_block(
-        "
-        {
-            let a: i32 = 7;
-        }
-        "
+        "{let a: i32 = 7;}"
     ).unwrap().1;
 
     println!("block {:?}", block);
-    
 
+    let u32_type = context.i32_type();
+    let fn_type = u32_type.fn_type(&[], false);
+    let function = module.add_function("expr", fn_type, None);
+    let basic_block = context.append_basic_block(&function, "entry");
+    builder.position_at_end(&basic_block);
+
+    let mut compiler = Compiler {
+        context: &context,
+        builder: &builder,
+        module: &module,
+        fn_value_opt: Some(function),
+        variables: HashMap::new(),
+    };
+
+    let res = compiler.compile_block(block);    
+    let fun_expr: JitFunction<ExprFunc> = 
+        unsafe { execution_engine.get_function("expr").ok().unwrap()};
+
+    unsafe {
+        println!("{}", fun_expr.call());
+    }
+    
 }
 
