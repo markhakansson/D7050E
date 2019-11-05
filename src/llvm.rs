@@ -47,7 +47,6 @@ impl<'a> Compiler<'a> {
         self.fn_value_opt.unwrap()
     }
 
-    #[inline]
     fn compile_expr(&self, expr: Expr) -> IntValue {
         match expr.clone() {
             Expr::Var(var) => {
@@ -133,14 +132,22 @@ impl<'a> Compiler<'a> {
                 },
                 _ => panic!(),
             },
+            Expr::Return(expr) => {
+                let val = self.compile_expr(*expr);
+                (self.builder.build_return(Some(&val)), true)
+            },
             _ => unimplemented!(),
         }
     }
 
-    fn compile_block(&mut self, block: Vec<Expr>) {
-        for expr in &block {
-
+    fn compile_block(&mut self, block: Vec<Expr>) -> InstructionValue {
+        for expr in block {
+            let (cmd, ret) = self.compile_keyword(expr);
+            if ret {
+                return cmd;
+            }
         }
+        panic!();
     }
 
 }
@@ -154,7 +161,7 @@ pub fn test() {
     let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
 
     let block = parse_block(
-        "{let a: i32 = 7;}"
+        "{let a: i32 = 7;return a;}"
     ).unwrap().1;
 
     println!("block {:?}", block);
@@ -174,6 +181,7 @@ pub fn test() {
     };
 
     let res = compiler.compile_block(block);    
+    module.print_to_stderr(); 
     let fun_expr: JitFunction<ExprFunc> = 
         unsafe { execution_engine.get_function("expr").ok().unwrap()};
 
