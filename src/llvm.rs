@@ -21,6 +21,7 @@ pub struct Compiler<'a> {
     pub context: &'a Context,
     pub builder: &'a Builder,
     pub module: &'a Module,
+    execution_engine: &'a ExecutionEngine,
     variables: HashMap<String, PointerValue>,
     fn_value_opt: Option<FunctionValue>,
 }
@@ -62,6 +63,7 @@ impl<'a> Compiler<'a> {
                 }
             },
             Expr::BinOp(l, op, r) => self.compile_bin_op(*l, op, *r),
+            Expr::FuncCall(fn_call) => self.compile_function_call(fn_call),
             _ => unimplemented!(),
         }
 
@@ -165,8 +167,18 @@ impl<'a> Compiler<'a> {
         alloca
     }
 
+    fn compile_function_call(&self, fn_call: FunctionCall) -> IntValue {
+        let function = self.module.get_function(&fn_call.name).unwrap();
+        let args: Vec<BasicValueEnum> = fn_call.args.content
+            .iter()
+            .map(|a| self.compile_expr(a.clone()).into())
+            .collect();
+        let call = self.builder.build_call(function, &args, &fn_call.name);
+        *call.try_as_basic_value().left().unwrap().as_int_value()
+    }
+
     fn compile_keyword(&mut self, keyword: Expr) -> (InstructionValue, bool) {
-        match keyword {
+        match keyword.clone() {
             Expr::Let(var, _, expr) => match *var {
                 Expr::Var(var) => {
                     let val = self.compile_expr(*expr);
@@ -188,6 +200,9 @@ impl<'a> Compiler<'a> {
             Expr::Return(expr) => {
                 let val = self.compile_expr(*expr);
                 (self.builder.build_return(Some(&val)), true)
+            },
+            Expr::FuncCall(_) => {
+                (self.compile_expr(keyword).as_instruction().unwrap(), false)
             },
             _ => unimplemented!(),
         }
@@ -218,16 +233,14 @@ impl<'a> Compiler<'a> {
     }
 
     fn compile_while(&mut self, condition: Expr, block: Block) -> InstructionValue {
-        let cond = self.compile_expr(condition);
-
         let do_block = self.context.append_basic_block(&self.fn_value(), "do");
         let cont_block = self.context.append_basic_block(&self.fn_value(), "cont");
 
-        self.builder.build_conditional_branch(cond, &do_block, &cont_block);
+        self.builder.build_conditional_branch(self.compile_expr(condition.clone()), &do_block, &cont_block);
 
         self.builder.position_at_end(&do_block);
         self.compile_block(block);
-        self.builder.build_conditional_branch(cond, &do_block, &cont_block);
+        self.builder.build_conditional_branch(self.compile_expr(condition.clone()), &do_block, &cont_block);
 
         self.builder.position_at_end(&cont_block);
         let phi = self.builder.build_phi(self.context.i32_type(), "whiletmp");
@@ -259,6 +272,62 @@ impl<'a> Compiler<'a> {
     
     }
 
+    // Still working on compiling parameters
+    fn compile_function(&self, func: Function) -> FunctionValue 
+    {   
+        let param_types: Vec<BasicTypeEnum> = func
+            .params
+            .iter()
+            .map(|param| match param.param_type {
+                Type::Int32 => self.context.i32_type().into(),
+                Type::Bool => self.context.bool_type().into(),
+                _ => unreachable!(),
+            }).collect();
+
+        let fn_ret_type = match func.return_type {
+            Type::Bool => self.context.bool_type().fn_type(&param_types, false),
+            Type::Int32 => self.context.i32_type().fn_type(&param_types, false),
+            Type::Void => self.context.void_type().fn_type(&param_types, false)
+        };
+
+        self.module.add_function(&func.name, fn_ret_type, None)
+
+    }
+
+}
+
+pub fn compile_program(fn_list: Functions) {
+    let context = Context::create();
+    let mut module = context.create_module("llvm-program");
+    let builder = context.create_builder();
+    let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
+
+    let mut compiler = Compiler {
+        context: &context,
+        builder: &builder,
+        module: &module,
+        execution_engine: &execution_engine,
+        fn_value_opt: None,
+        variables: HashMap::new(),
+    };
+
+    for function in fn_list {
+        let llvm_func = compiler.compile_function(function.clone());
+        compiler.fn_value_opt = Some(llvm_func);
+        let basic_block = compiler.context.append_basic_block(&llvm_func, "entry");
+
+        compiler.builder.position_at_end(&basic_block);
+        compiler.compile_block(function.block);
+    }
+
+    module.print_to_stderr(); 
+    let fun_expr: JitFunction<ExprFunc> = 
+        unsafe { execution_engine.get_function("main").ok().unwrap()};
+
+    unsafe {
+        println!("{}", fun_expr.call());
+    }
+
 }
 
 pub fn test() {
@@ -287,6 +356,7 @@ pub fn test() {
         context: &context,
         builder: &builder,
         module: &module,
+        execution_engine: &execution_engine,
         fn_value_opt: Some(function),
         variables: HashMap::new(),
     };
