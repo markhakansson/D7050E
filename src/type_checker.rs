@@ -8,7 +8,11 @@ pub type TypeRes<T> = Result<T, TypeErr>;
 pub struct TypeErr(pub String);
 
 /// Type checks any expression.
-fn tc_expr(expr: Expr, fn_list: &mut Functions, fn_context: &mut ContextStack<Type>) -> TypeRes<Type> {
+fn tc_expr(
+    expr: Expr,
+    fn_list: &mut Functions,
+    fn_context: &mut ContextStack<Type>,
+) -> TypeRes<Type> {
     match expr.clone() {
         Expr::Num(_) => Ok(Type::Int32),
         Expr::Bool(_) => Ok(Type::Bool),

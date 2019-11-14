@@ -146,7 +146,9 @@ impl<'a> ContextStackMethods<'a, Type, TypeRes<&'a mut Context<Type>>> for Conte
     }
 }
 
-impl<'a> ContextStackMethods<'a, Value, EvalRes<&'a mut Context<Value>>> for ContextStack<'a, Value> {
+impl<'a> ContextStackMethods<'a, Value, EvalRes<&'a mut Context<Value>>>
+    for ContextStack<'a, Value>
+{
     fn drop_current_context(&mut self) {
         self.pop();
     }
@@ -167,7 +169,7 @@ impl<'a> ContextStackMethods<'a, Value, EvalRes<&'a mut Context<Value>>> for Con
 }
 
 pub trait FunctionsMethods<T> {
-    fn get_fn(&mut self, name: String) -> T; 
+    fn get_fn(&mut self, name: String) -> T;
 }
 
 impl FunctionsMethods<EvalRes<Function>> for Functions {

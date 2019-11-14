@@ -7,13 +7,11 @@ use inkwell::{
     execution_engine::{ExecutionEngine, JitFunction},
     module::Module,
     passes::PassManager,
-    IntPredicate,
     types::BasicTypeEnum,
     values::{BasicValueEnum, FloatValue, FunctionValue, InstructionValue, IntValue, PointerValue},
-    FloatPredicate, OptimizationLevel,
+    FloatPredicate, IntPredicate, OptimizationLevel,
 };
 use std::collections::HashMap;
-use std::error::Error;
 
 type ExprFunc = unsafe extern "C" fn() -> i32;
 
@@ -53,7 +51,7 @@ impl<'a> Compiler<'a> {
             Expr::Var(var) => {
                 let val = self.get_variable(&var);
                 self.builder.build_load(*val, &var).into_int_value()
-            },
+            }
             Expr::Num(i) => self.compile_num(i),
             Expr::Bool(b) => {
                 if b {
@@ -61,13 +59,12 @@ impl<'a> Compiler<'a> {
                 } else {
                     self.context.bool_type().const_int(0, false)
                 }
-            },
+            }
             Expr::BinOp(l, op, r) => self.compile_bin_op(*l, op, *r),
             Expr::FuncCall(fn_call) => self.compile_function_call(fn_call),
             _ => unimplemented!(),
         }
-
-    }     
+    }
 
     fn compile_num(&self, num: i32) -> IntValue {
         self.context.i32_type().const_int(num as u64, false)
@@ -82,13 +79,13 @@ impl<'a> Compiler<'a> {
             Op::MathOp(token) => self.compile_math_op(l_val, token, r_val),
             Op::RelOp(token) => self.compile_rel_op(l_val, token, r_val),
             _ => panic!("Not a valid expression"),
-        }    
+        }
     }
 
     fn compile_bool_op(&self, l: IntValue, token: BoolToken, r: IntValue) -> IntValue {
         match token {
-            BoolToken::And => self.builder.build_and(l,r,"and"),
-            BoolToken::Or => self.builder.build_or(l,r,"or"),
+            BoolToken::And => self.builder.build_and(l, r, "and"),
+            BoolToken::Or => self.builder.build_or(l, r, "or"),
         }
     }
 
@@ -104,9 +101,15 @@ impl<'a> Compiler<'a> {
     fn compile_rel_op(&self, l: IntValue, token: RelToken, r: IntValue) -> IntValue {
         match token {
             RelToken::Equal => self.builder.build_int_compare(IntPredicate::EQ, l, r, "eq"),
-            RelToken::Ge => self.builder.build_int_compare(IntPredicate::SGT, l, r, "ge"),
-            RelToken::Le => self.builder.build_int_compare(IntPredicate::SLT, l, r, "le"),
-            RelToken::Neq => self.builder.build_int_compare(IntPredicate::NE, l, r, "neq"),
+            RelToken::Ge => self
+                .builder
+                .build_int_compare(IntPredicate::SGT, l, r, "ge"),
+            RelToken::Le => self
+                .builder
+                .build_int_compare(IntPredicate::SLT, l, r, "le"),
+            RelToken::Neq => self
+                .builder
+                .build_int_compare(IntPredicate::NE, l, r, "neq"),
         }
     }
 
@@ -118,32 +121,32 @@ impl<'a> Compiler<'a> {
             Op::VarOp(VarToken::Assign) => {
                 let var_ptr = match var {
                     Expr::Var(var) => self.get_variable(&var),
-                    _ => panic!()
+                    _ => panic!(),
                 };
                 self.builder.build_store(*var_ptr, val)
-            },
+            }
             Op::VarOp(VarToken::PlusEq) => {
                 let var_ptr = match &var {
                     Expr::Var(var) => self.get_variable(&var),
-                    _ => panic!()
+                    _ => panic!(),
                 };
                 let var_val = self.compile_expr(var);
                 let new_val = self.compile_math_op(var_val, MathToken::Plus, val);
                 self.builder.build_store(*var_ptr, new_val)
-            },
+            }
             Op::VarOp(VarToken::MinEq) => {
                 let var_ptr = match &var {
                     Expr::Var(var) => self.get_variable(&var),
-                    _ => panic!()
+                    _ => panic!(),
                 };
                 let var_val = self.compile_expr(var);
                 let new_val = self.compile_math_op(var_val, MathToken::Minus, val);
                 self.builder.build_store(*var_ptr, new_val)
-            },
+            }
             Op::VarOp(VarToken::MulEq) => {
                 let var_ptr = match &var {
                     Expr::Var(var) => self.get_variable(&var),
-                    _ => panic!()
+                    _ => panic!(),
                 };
                 let var_val = self.compile_expr(var);
                 let new_val = self.compile_math_op(var_val, MathToken::Multiply, val);
@@ -162,6 +165,7 @@ impl<'a> Compiler<'a> {
             Some(first_instr) => builder.position_before(&first_instr),
             None => builder.position_at_end(&entry),
         }
+        
         let alloca = builder.build_alloca(self.context.i32_type(), name);
         self.variables.insert(name.to_string(), alloca);
         alloca
@@ -169,7 +173,9 @@ impl<'a> Compiler<'a> {
 
     fn compile_function_call(&self, fn_call: FunctionCall) -> IntValue {
         let function = self.module.get_function(&fn_call.name).unwrap();
-        let args: Vec<BasicValueEnum> = fn_call.args.content
+        let args: Vec<BasicValueEnum> = fn_call
+            .args
+            .content
             .iter()
             .map(|a| self.compile_expr(a.clone()).into())
             .collect();
@@ -186,72 +192,68 @@ impl<'a> Compiler<'a> {
                     let store = self.builder.build_store(alloca, val);
 
                     (store, false)
-                },
+                }
                 _ => panic!(),
             },
-            Expr::VarOp(var, op, expr) => 
-                (self.compile_var_op(*var, op, *expr), false),
-            Expr::If(cond, block) => {
-                (self.compile_if(*cond, block), false)
-            },
-            Expr::While(cond, block) => {
-                (self.compile_while(*cond, block), false)
-            }
+            Expr::VarOp(var, op, expr) => (self.compile_var_op(*var, op, *expr), false),
+            Expr::If(cond, block) => (self.compile_if(*cond, block), false),
+            Expr::While(cond, block) => (self.compile_while(*cond, block), false),
             Expr::Return(expr) => {
                 let val = self.compile_expr(*expr);
                 (self.builder.build_return(Some(&val)), true)
-            },
-            Expr::FuncCall(_) => {
-                (self.compile_expr(keyword).as_instruction().unwrap(), false)
-            },
+            }
+            Expr::FuncCall(_) => (self.compile_expr(keyword).as_instruction().unwrap(), false),
             _ => unimplemented!(),
         }
     }
 
     fn compile_if(&mut self, condition: Expr, block: Block) -> InstructionValue {
         let cond = self.compile_expr(condition);
-
         let then_block = self.context.append_basic_block(&self.fn_value(), "then");
         let cont_block = self.context.append_basic_block(&self.fn_value(), "cont");
 
-        self.builder.build_conditional_branch(cond, &then_block, &cont_block);
-        
+        self.builder
+            .build_conditional_branch(cond, &then_block, &cont_block);
         self.builder.position_at_end(&then_block);
         self.compile_block(block);
+
         self.builder.build_unconditional_branch(&cont_block);
-
         self.builder.position_at_end(&cont_block);
-        let phi = self.builder.build_phi(self.context.i32_type(), "iftmp");
 
+        let phi = self.builder.build_phi(self.context.i32_type(), "iftmp");
         phi.add_incoming(&[
             (&self.compile_num(0), &then_block),
-            (&self.compile_num(0), &cont_block)
+            (&self.compile_num(0), &cont_block),
         ]);
-
         phi.as_instruction()
-
     }
 
     fn compile_while(&mut self, condition: Expr, block: Block) -> InstructionValue {
         let do_block = self.context.append_basic_block(&self.fn_value(), "do");
         let cont_block = self.context.append_basic_block(&self.fn_value(), "cont");
 
-        self.builder.build_conditional_branch(self.compile_expr(condition.clone()), &do_block, &cont_block);
-
+        self.builder.build_conditional_branch(
+            self.compile_expr(condition.clone()),
+            &do_block,
+            &cont_block,
+        );
         self.builder.position_at_end(&do_block);
         self.compile_block(block);
-        self.builder.build_conditional_branch(self.compile_expr(condition.clone()), &do_block, &cont_block);
 
+        self.builder.build_conditional_branch(
+            self.compile_expr(condition.clone()),
+            &do_block,
+            &cont_block,
+        );
         self.builder.position_at_end(&cont_block);
-        let phi = self.builder.build_phi(self.context.i32_type(), "whiletmp");
 
+        // This phi node does nothing, used to return an InstructionValue
+        let phi = self.builder.build_phi(self.context.i32_type(), "whiletmp");
         phi.add_incoming(&[
             (&self.compile_num(0), &do_block),
-            (&self.compile_num(0), &do_block)
+            (&self.compile_num(0), &do_block),
         ]);
-
         phi.as_instruction()
-        
     }
 
     fn compile_block(&mut self, block: Block) -> InstructionValue {
@@ -264,17 +266,14 @@ impl<'a> Compiler<'a> {
             last_cmd = Some(cmd);
         }
 
-        if last_cmd.is_some() {
-            return last_cmd.unwrap()
-        } else {
-            panic!()
+        match last_cmd {
+            Some(instruction) => instruction,
+            None => panic!(),
         }
-    
     }
 
     // Still working on compiling parameters
-    fn compile_function(&self, func: Function) -> FunctionValue 
-    {   
+    fn compile_function(&self, func: Function) -> FunctionValue {
         let param_types: Vec<BasicTypeEnum> = func
             .params
             .iter()
@@ -282,25 +281,26 @@ impl<'a> Compiler<'a> {
                 Type::Int32 => self.context.i32_type().into(),
                 Type::Bool => self.context.bool_type().into(),
                 _ => unreachable!(),
-            }).collect();
+            })
+            .collect();
 
         let fn_ret_type = match func.return_type {
             Type::Bool => self.context.bool_type().fn_type(&param_types, false),
             Type::Int32 => self.context.i32_type().fn_type(&param_types, false),
-            Type::Void => self.context.void_type().fn_type(&param_types, false)
+            Type::Void => self.context.void_type().fn_type(&param_types, false),
         };
 
         self.module.add_function(&func.name, fn_ret_type, None)
-
     }
-
 }
 
 pub fn compile_program(fn_list: Functions) {
     let context = Context::create();
     let mut module = context.create_module("llvm-program");
     let builder = context.create_builder();
-    let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
+    let execution_engine = module
+        .create_jit_execution_engine(OptimizationLevel::None)
+        .unwrap();
 
     let mut compiler = Compiler {
         context: &context,
@@ -320,14 +320,13 @@ pub fn compile_program(fn_list: Functions) {
         compiler.compile_block(function.block);
     }
 
-    module.print_to_stderr(); 
-    let fun_expr: JitFunction<ExprFunc> = 
-        unsafe { execution_engine.get_function("main").ok().unwrap()};
+    module.print_to_stderr();
+    let fun_expr: JitFunction<ExprFunc> =
+        unsafe { execution_engine.get_function("main").ok().unwrap() };
 
     unsafe {
         println!("{}", fun_expr.call());
     }
-
 }
 
 pub fn test() {
@@ -336,13 +335,17 @@ pub fn test() {
     let builder = context.create_builder();
     let fpm = PassManager::create(&module);
     fpm.initialize();
-    let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
+    let execution_engine = module
+        .create_jit_execution_engine(OptimizationLevel::None)
+        .unwrap();
 
     let block = parse_block(
         //"{let a: i32 = 5;let b: i32 = 0; let c: bool = b > a; return c;}"
         //"{let b: bool = false; if b {return 5;}; return 4;}"
-        "{let b: bool = true; let i: i32 = 0; while b {i = 1; b = false;}; return i;}"
-    ).unwrap().1;
+        "{let b: bool = true; let i: i32 = 0; while b {i = 1; b = false;}; return i;}",
+    )
+    .unwrap()
+    .1;
 
     println!("block {:?}", block);
 
@@ -361,14 +364,12 @@ pub fn test() {
         variables: HashMap::new(),
     };
 
-    let res = compiler.compile_block(Block::new(block));    
-    module.print_to_stderr(); 
-    let fun_expr: JitFunction<ExprFunc> = 
-        unsafe { execution_engine.get_function("expr").ok().unwrap()};
+    let res = compiler.compile_block(Block::new(block));
+    module.print_to_stderr();
+    let fun_expr: JitFunction<ExprFunc> =
+        unsafe { execution_engine.get_function("expr").ok().unwrap() };
 
     unsafe {
         println!("{}", fun_expr.call());
     }
-    
 }
-

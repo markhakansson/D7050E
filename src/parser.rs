@@ -422,7 +422,7 @@ mod parse_tests {
                 return a;
         }
         ";
-        let program_3 ="
+        let program_3 = "
         fn func() -> void {
             return;
         }";
