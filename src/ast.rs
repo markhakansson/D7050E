@@ -267,6 +267,7 @@ impl From<Expr> for i32 {
 // Implement TryForm trait instead to get a Result back
 impl From<Expr> for String {
     fn from(e: Expr) -> String {
+        println!("!!!!!!!!!!!!! {:#?}", e);
         match e {
             Expr::Var(s) => s,
             Expr::Bool(b) => format!("{}", b),

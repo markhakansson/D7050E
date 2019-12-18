@@ -97,9 +97,7 @@ fn tc_bin_expr(
     match res {
         Ok(op_type) => Ok(op_type),
         Err(e) => Err(TypeErr(format!(
-            "on values ´{}´ and ´{}´: {} ",
-            String::from(l),
-            String::from(r),
+            "{}",
             e.0
         ))),
     }
@@ -116,6 +114,10 @@ fn tc_var_op(
     let val_type = tc_expr(val.clone(), fn_list, fn_context)?;
 
     if var_type == val_type {
+        match op {
+            Op::RelOp(_) => return Ok(Type::Bool),
+            _ => (),
+        };
         Ok(var_type)
     } else {
         Err(TypeErr(format!(
