@@ -34,16 +34,6 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "d7050e"
-version = "0.1.0"
-dependencies = [
- "derive_more 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "inkwell 0.1.0 (git+https://github.com/TheDan64/inkwell?branch=llvm8-0)",
- "nom 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "nom_locate 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "derive_more"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -246,6 +236,16 @@ dependencies = [
  "proc-macro2 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "simple-rustc"
+version = "0.1.0"
+dependencies = [
+ "derive_more 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "inkwell 0.1.0 (git+https://github.com/TheDan64/inkwell?branch=llvm8-0)",
+ "nom 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nom_locate 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

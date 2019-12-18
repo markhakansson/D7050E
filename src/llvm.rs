@@ -329,7 +329,7 @@ pub fn compile_program(fn_list: Functions) {
     }
 }
 
-pub fn test() {
+/* pub fn test() {
     let context = Context::create();
     let mut module = context.create_module("expr");
     let builder = context.create_builder();
@@ -372,4 +372,4 @@ pub fn test() {
     unsafe {
         println!("{}", fun_expr.call());
     }
-}
+} */

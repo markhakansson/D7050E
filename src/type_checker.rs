@@ -328,36 +328,27 @@ pub fn tc_program(fn_list: &mut Functions) -> TypeRes<Type> {
     res
 }
 
-pub fn test() {
-    let mut fn_context: ContextStack<Type> = ContextStack::new();
-    fn_context.new_context().unwrap().new_scope();
+#[cfg(test)]
+mod tc_tests {
+    use super::*;
 
-    /*     let expr = "{
-        let a: bool = true;
-        let b: i32 = 1;
-        while a {
-            b+=a;
-       };
-    }";
+    #[test]
+    fn test_fn_call() {
+        let expr = "
+        fn main() -> () {
+            let hi: i32 = 1;
+            let val1: i32 = call(hi);
+            let val2: i32 = call(val1);
+        }
 
-    let tree = parse_block(expr).unwrap().1;
+        fn call(a: i32) -> i32 {
+            return 5*a;
+        }
+        ";
 
-    let tc = tc_block(Block::new(tree), &mut fn_context);
-    println!("{:#?}", tc); */
+        let mut tree = parse_program(expr).unwrap().1;
+        let tc = tc_program(&mut tree);
 
-    let expr = "
-    fn func1(a: i32) -> i32 {
-        let hello: bool = true;
-        let fifty: i32 = k;
-        let a: i32 = func2(hello);
-        return a;
+        assert_eq!(tc.is_ok(), true);
     }
-
-    fn func2(b: i32) -> i32 {
-        return b*5;   
-    }";
-    let mut tree = parse_program(expr).unwrap().1;
-    let tc = tc_program(&mut tree);
-
-    println!("{:#?}", tc);
 }

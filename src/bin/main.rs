@@ -1,10 +1,10 @@
-extern crate d7050e;
+extern crate simple_rustc;
 
-use crate::d7050e::ast::*;
-use crate::d7050e::interpreter::*;
-use crate::d7050e::llvm;
-use crate::d7050e::parser::*;
-use crate::d7050e::type_checker::*;
+use crate::simple_rustc::ast::*;
+use crate::simple_rustc::interpreter::*;
+use crate::simple_rustc::llvm;
+use crate::simple_rustc::parser::*;
+use crate::simple_rustc::type_checker::*;
 
 use std::collections::HashMap;
 

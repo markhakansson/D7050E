@@ -1,7 +1,7 @@
-extern crate d7050e;
+extern crate simple_rustc;
 
-use crate::d7050e::ast::*;
-use crate::d7050e::parser::*;
+use crate::simple_rustc::ast::*;
+use crate::simple_rustc::parser::*;
 
 /* #[test]
 fn test_parse_bin_op() {

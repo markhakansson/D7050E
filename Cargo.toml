@@ -1,5 +1,5 @@
 [package]
-name = "d7050e"
+name = "simple-rustc"
 version = "0.1.0"
 authors = ["mark"]
 edition = "2018"
