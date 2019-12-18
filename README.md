@@ -37,4 +37,4 @@ There are a few bugs in the type checker were errors are thrown even though the 
 The LLVM compiler is not complete. It does not support function arguments for example.
 
 ## License
-Licensed under the MIT license. See [LICENSE.md](LICENSE.md) for details.
+Licensed under the MIT license. See [LICENSE](LICENSE) for details.
